@@ -1,0 +1,44 @@
+{
+  "name": "olow-ts",
+  "version": "1.0.0",
+  "description": "Multi-messenger AI chatbot engine",
+  "type": "module",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "dev": "tsx watch src/main.ts",
+    "build": "tsc",
+    "start": "node dist/main.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix",
+    "typecheck": "tsc --noEmit",
+    "db:init": "tsx scripts/initialize-mongo.ts"
+  },
+  "dependencies": {
+    "fastify": "^5.3.3",
+    "zod": "^3.25.67",
+    "mongodb": "^6.16.0",
+    "ioredis": "^5.6.1",
+    "pino": "^9.7.0",
+    "pino-pretty": "^13.0.0",
+    "yaml": "^2.8.0",
+    "openai": "^5.8.2",
+    "graphology": "^0.25.4",
+    "graphology-types": "^0.24.7",
+    "@slack/bolt": "^4.3.1",
+    "@modelcontextprotocol/sdk": "^1.12.3",
+    "fast-xml-parser": "^5.2.3"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.3",
+    "tsx": "^4.19.4",
+    "@types/node": "^22.15.29",
+    "vitest": "^3.2.3",
+    "@typescript-eslint/eslint-plugin": "^8.34.1",
+    "@typescript-eslint/parser": "^8.34.1",
+    "eslint": "^9.28.0"
+  }
+}
