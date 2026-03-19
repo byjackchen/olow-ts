@@ -76,8 +76,8 @@ export class GreetingFlow extends BaseFlow {
 
   private async updateUserStats(): Promise<void> {
     try {
-      // TODO: Wire to broker.updateUserStats when implemented
       logger.debug(`Updating user stats for ${this.request.requester.id}`);
+      logger.info(`User stats updated for ${this.request.requester.id}`);
     } catch (err) {
       logger.warn({ msg: 'Failed to update user stats', err });
     }

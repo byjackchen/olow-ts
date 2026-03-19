@@ -4,6 +4,8 @@ import logger from './logger.js';
 import * as mongo from '../storage/mongo.js';
 import * as wecomApi from '../services/wecom.api.js';
 import * as openaiApi from '../services/openai.api.js';
+import { callHyaideLlm } from '../services/hyaide.api.js';
+import { getUserRtx } from '../services/slack.api.js';
 import { type MessengerType, MessengerType as MT, type UserIdType, UserIdType as UIT } from './types.js';
 
 // ─── Broker ───
@@ -228,8 +230,7 @@ export class Broker {
       rtx = resp.user_list[0]?.['name'] ?? nonStdUserId;
       await mongo.upsertUser(rtx, { wecomUserid: nonStdUserId });
     } else if (userIdType === UIT.SLACK) {
-      // TODO: Implement Slack user resolution
-      rtx = nonStdUserId;
+      rtx = await getUserRtx(null, nonStdUserId);
       await mongo.upsertUser(rtx, { slackUserid: nonStdUserId });
     } else {
       rtx = nonStdUserId;
@@ -277,8 +278,9 @@ export class Broker {
       const resp = await openaiApi.callChatCompletions(message, { model });
       respStr = resp.choices[0]?.message.content ?? '';
     } else if (provider === 'hyaide') {
-      // TODO: Implement Hyaide LLM call
-      throw new Error('Hyaide provider not yet implemented');
+      const token = this.getRotatedToken();
+      const resp = await callHyaideLlm(token, message, model);
+      respStr = resp.choices[0]?.message.content ?? '';
     } else {
       throw new Error(`Unsupported LLM provider: ${provider}`);
     }

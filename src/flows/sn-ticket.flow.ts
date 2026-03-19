@@ -1,6 +1,7 @@
 import { BaseFlow } from './base.flow.js';
-import { EventType, EventStatus, type MessengerType } from '../engine/types.js';
+import { EventType, EventStatus, type MessengerType, FlowMsgType } from '../engine/types.js';
 import type { Event } from '../engine/events.js';
+import { TextTemplate } from '../templates/text.template.js';
 import { registerFlow } from '../engine/dispatcher.js';
 import logger from '../engine/logger.js';
 
@@ -11,7 +12,18 @@ export class SnTicketFlow extends BaseFlow {
 
   async run(): Promise<EventStatus> {
     logger.info(`SnTicketFlow handling ticket push for user ${this.request.requester.id}`);
-    // TODO: Implement ServiceNow ticket push handling logic
+
+    const action = this.request.action;
+    const data = this.request.msg;
+    logger.info({ msg: 'ServiceNow ticket push', action, data });
+
+    await this.event.propagateMsg(
+      new TextTemplate([`Ticket update received: ${action}`]),
+      undefined,
+      undefined,
+      FlowMsgType.ANSWER,
+    );
+
     return EventStatus.COMPLETE;
   }
 }

@@ -1,6 +1,7 @@
 import { BaseFlow } from '../base.flow.js';
-import { EventType, EventStatus, type MessengerType } from '../../engine/types.js';
+import { EventType, EventStatus, type MessengerType, FlowMsgType } from '../../engine/types.js';
 import type { Event } from '../../engine/events.js';
+import { TextTemplate } from '../../templates/text.template.js';
 import { registerFlow } from '../../engine/dispatcher.js';
 import logger from '../../engine/logger.js';
 
@@ -11,7 +12,14 @@ export class ReactNavigateFlow extends BaseFlow {
 
   async run(): Promise<EventStatus> {
     logger.info(`ReactNavigateFlow navigating for user ${this.request.requester.id}`);
-    // TODO: Implement navigate logic
+
+    await this.event.propagateMsg(
+      new TextTemplate(['Here are some options you can explore:']),
+      undefined,
+      undefined,
+      FlowMsgType.NAVIGATE,
+    );
+
     return EventStatus.COMPLETE;
   }
 }

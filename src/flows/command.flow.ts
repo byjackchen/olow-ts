@@ -1,7 +1,9 @@
 import { BaseFlow } from './base.flow.js';
-import { EventType, EventStatus, type MessengerType } from '../engine/types.js';
-import type { Event } from '../engine/events.js';
+import { EventType, EventStatus, type MessengerType, FlowMsgType } from '../engine/types.js';
+import { Event } from '../engine/events.js';
+import { TextTemplate } from '../templates/text.template.js';
 import { registerFlow } from '../engine/dispatcher.js';
+import { MemoryThreadName, type MemorySettings } from '../engine/memory/index.js';
 import logger from '../engine/logger.js';
 
 export class CommandFlow extends BaseFlow {
@@ -10,8 +12,53 @@ export class CommandFlow extends BaseFlow {
   }
 
   async run(): Promise<EventStatus> {
-    logger.info(`CommandFlow handling command for user ${this.request.requester.id}`);
-    // TODO: Implement command handling logic
+    const userId = this.request.requester.id;
+    const commandText = this.request.content.mixedText.trim();
+    logger.info(`CommandFlow handling command "${commandText}" for user ${userId}`);
+
+    const parts = commandText.split(/\s+/);
+    const cmd = parts[0]?.toLowerCase() ?? '';
+
+    if (cmd === '/menu' || cmd === '/start') {
+      this.dispatcher.eventchain.push(new Event(EventType.MENU));
+    } else if (cmd === '/language') {
+      const lang = parts[1]?.toLowerCase();
+      if (lang === 'cn' || lang === 'en') {
+        // Update settings memory language
+        if ('memory' in this.request.requester) {
+          const memory = await (this.request.requester as { memory: () => Promise<{ getThread: (name: string) => { memory: MemorySettings } | undefined; setThread: (name: string, memory: unknown) => void }> }).memory();
+          const settingsThread = memory.getThread(MemoryThreadName.SETTINGS);
+          if (settingsThread) {
+            (settingsThread.memory as MemorySettings).info_maps['language'] = lang;
+          } else {
+            memory.setThread(MemoryThreadName.SETTINGS, { info_maps: { language: lang } });
+          }
+        }
+        this.dispatcher.eventchain.push(new Event(EventType.MENU));
+      } else {
+        await this.event.propagateMsg(
+          new TextTemplate(['Usage: /language cn or /language en']),
+          undefined,
+          undefined,
+          FlowMsgType.ANSWER,
+        );
+      }
+    } else if (cmd === '/help') {
+      await this.event.propagateMsg(
+        new TextTemplate(['Available commands:\n/menu - Show main menu\n/start - Show main menu\n/language cn|en - Set language\n/help - Show this help message']),
+        undefined,
+        undefined,
+        FlowMsgType.ANSWER,
+      );
+    } else {
+      await this.event.propagateMsg(
+        new TextTemplate([`Unknown command: ${cmd}`]),
+        undefined,
+        undefined,
+        FlowMsgType.ANSWER,
+      );
+    }
+
     return EventStatus.COMPLETE;
   }
 }

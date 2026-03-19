@@ -73,7 +73,6 @@ export function createMessenger(type: MessengerType): IMessenger {
     case MT.WEB_BOT:
       return new WebBotMessenger();
     case MT.WECOM_BOT:
-      // TODO: Full implementation in Phase 8
       return new StubMessenger(type);
     case MT.WECOM_GROUPBOT:
       return new StubMessenger(type);

@@ -1,6 +1,8 @@
 import { BaseFlow } from './base.flow.js';
-import { EventType, EventStatus, type MessengerType } from '../engine/types.js';
+import { EventType, EventStatus, type MessengerType, FlowMsgType } from '../engine/types.js';
 import type { Event } from '../engine/events.js';
+import { TextTemplate } from '../templates/text.template.js';
+import { I18n } from '../templates/i18n.js';
 import { registerFlow } from '../engine/dispatcher.js';
 import logger from '../engine/logger.js';
 
@@ -11,7 +13,17 @@ export class MenuFlow extends BaseFlow {
 
   async run(): Promise<EventStatus> {
     logger.info(`MenuFlow handling menu for user ${this.request.requester.id}`);
-    // TODO: Implement menu handling logic
+
+    await this.event.propagateMsg(
+      new TextTemplate([
+        I18n.GREETING,
+        () => '\n\nHow can I assist you?\n1. Ask a question\n2. Check ticket status\n3. Contact support\n\nType /help for available commands.',
+      ]),
+      undefined,
+      undefined,
+      FlowMsgType.ANSWER,
+    );
+
     return EventStatus.COMPLETE;
   }
 }

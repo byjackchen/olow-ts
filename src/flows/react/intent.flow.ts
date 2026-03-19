@@ -38,7 +38,18 @@ export class ReactIntentFlow extends BaseFlow {
       // Full query rewriting mode with LLM
       // Get conversation history from graph memory
       let chatHistory = '';
-      // TODO: Wire to context graph when user memory is loaded
+      if ('memory' in this.request.requester && typeof (this.request.requester as Record<string, unknown>)['memory'] === 'function') {
+        try {
+          const memory = await (this.request.requester as { memory: () => Promise<{ getOrCreateContextGraph: () => { memory: { nodes: Array<{ type: string; text: string }>; edges: unknown[] } } }> }).memory();
+          const graphThread = memory.getOrCreateContextGraph();
+          const contentNodes = graphThread.memory.nodes
+            .filter((n: { type: string }) => n.type === 'content' || n.type === 'rewrite')
+            .map((n: { text: string }) => n.text);
+          chatHistory = contentNodes.join('\n');
+        } catch {
+          chatHistory = '';
+        }
+      }
 
       try {
         const [success, result] = await this.broker.callLlm(
@@ -79,8 +90,18 @@ export class ReactIntentFlow extends BaseFlow {
       }
     } else {
       // Multi-turns mode — use conversation history directly
-      // TODO: Get conversation histories from context graph
-      const histories: string[] = [];
+      let histories: string[] = [];
+      if ('memory' in this.request.requester && typeof (this.request.requester as Record<string, unknown>)['memory'] === 'function') {
+        try {
+          const memory = await (this.request.requester as { memory: () => Promise<{ getOrCreateContextGraph: () => { memory: { nodes: Array<{ type: string; text: string }>; edges: unknown[] } } }> }).memory();
+          const graphThread = memory.getOrCreateContextGraph();
+          histories = graphThread.memory.nodes
+            .filter((n: { type: string }) => n.type === 'content' || n.type === 'rewrite')
+            .map((n: { text: string }) => n.text);
+        } catch {
+          histories = [];
+        }
+      }
 
       if (histories.length > 0) {
         this.dispatcher.states.react.process_chain.push({

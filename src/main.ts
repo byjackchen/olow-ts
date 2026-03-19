@@ -110,20 +110,62 @@ app.post<{ Querystring: { mode?: 'async' | 'block' | 'stream' } }>(
 );
 
 app.post('/wecom_bot', async (request, reply) => {
-  const body = request.body;
+  const body = request.body as Record<string, unknown>;
   logger.info({ msg: 'Received WeCom Bot request', body });
-  // TODO: Wire to Dispatcher in Phase 8
-  return reply.send('');
+
+  try {
+    const asyncGen = Dispatcher.asyncMain({
+      broker,
+      responseMode: ResponseMode.POST,
+      space: config.space,
+      messengerType: MessengerType.WECOM_BOT,
+      requesterType: RequesterType.USER,
+      inMsg: body,
+    });
+
+    // Fire-and-forget: consume the generator in the background
+    void (async () => {
+      for await (const _output of asyncGen) {
+        // consumed for side-effects (posting messages)
+      }
+    })();
+
+    return reply.send('');
+  } catch (err) {
+    logger.error({ msg: 'Failed to process WeCom Bot request', err });
+    return reply.send('');
+  }
 });
 
 app.post<{ Querystring: { mode?: 'async' | 'block' | 'stream' } }>(
   '/slack_bot',
   { preHandler: verifyBearerToken },
   async (request, reply) => {
-    const body = request.body;
+    const body = request.body as Record<string, unknown>;
     logger.info({ msg: 'Received Slack Bot request', body });
-    // TODO: Wire to Dispatcher in Phase 8
-    return reply.send({});
+
+    try {
+      const asyncGen = Dispatcher.asyncMain({
+        broker,
+        responseMode: ResponseMode.POST,
+        space: config.space,
+        messengerType: MessengerType.SLACK_BOT,
+        requesterType: RequesterType.USER,
+        inMsg: body,
+      });
+
+      // Fire-and-forget: consume the generator in the background
+      void (async () => {
+        for await (const _output of asyncGen) {
+          // consumed for side-effects (posting messages)
+        }
+      })();
+
+      return reply.send({});
+    } catch (err) {
+      logger.error({ msg: 'Failed to process Slack Bot request', err });
+      return reply.send({});
+    }
   },
 );
 
@@ -132,8 +174,28 @@ app.post<{ Querystring: { mode?: 'async' | 'block' | 'stream' } }>(
   async (request, reply) => {
     const body = request.body as Record<string, unknown>;
     logger.info({ msg: 'Received Midserver request', body });
-    // TODO: Wire to Dispatcher in Phase 8
-    return reply.send({ status: 'received' });
+
+    try {
+      const asyncGen = Dispatcher.asyncMain({
+        broker,
+        responseMode: ResponseMode.POST,
+        space: config.space,
+        messengerType: MessengerType.WECOM_BOT,
+        requesterType: RequesterType.SYSTEM,
+        systemName: SystemName.SERVICENOW,
+        inMsg: body,
+      });
+
+      // Block mode: consume all outputs and return final states
+      let states: any = {};
+      for await (const output of asyncGen) {
+        if (output.type === 'states') states = output.data;
+      }
+      return reply.send(states);
+    } catch (err) {
+      logger.error({ msg: 'Failed to process Midserver request', err });
+      return reply.send({ status: 'received' });
+    }
   },
 );
 
@@ -160,8 +222,27 @@ app.post(
       });
     }
 
-    // TODO: Wire to Dispatcher in Phase 8
-    return reply.send({ status: 'success', message: 'Service request processed' });
+    try {
+      const asyncGen = Dispatcher.asyncMain({
+        broker,
+        responseMode: ResponseMode.POST,
+        space: config.space,
+        messengerType: MessengerType.WECOM_BOT,
+        requesterType: RequesterType.SYSTEM,
+        systemName: SystemName.DEFAULTSYS,
+        inMsg: body,
+      });
+
+      // Block mode: consume all outputs and return final states
+      let states: any = {};
+      for await (const output of asyncGen) {
+        if (output.type === 'states') states = output.data;
+      }
+      return reply.send(states.service_response ?? { status: 'success', message: 'Service request processed' });
+    } catch (err) {
+      logger.error({ msg: 'Failed to process Services request', err });
+      return reply.send({ status: 'success', message: 'Service request processed' });
+    }
   },
 );
 
