@@ -1,9 +1,11 @@
 import {
   BaseFlow, Event, Request, flowRegistry, getLogger,
-  EventType, EventStatus, ActionType, FlowMsgType,
+  CoreEventType, EventStatus, ActionType, FlowMsgType,
   MemoryThreadName,
 } from '@olow/engine';
 import type { MessengerType, MemoryActionChain } from '@olow/engine';
+import { AppEventType } from '../events.js';
+import { ReactEventType } from '@olow/react-agent';
 const logger = getLogger();
 import { TextTemplate, AgentSupportConfirmTemplate, I18n } from '@olow/templates';
 import { config } from '../config/index.js';
@@ -59,7 +61,7 @@ function checkSimilarity(text: string): 'greeting' | 'agentsupport' | null {
 @flowRegistry.register()
 export class TriageFlow extends BaseFlow {
   static canHandle(event: Event, _messengerType?: MessengerType): boolean {
-    return event.type === EventType.TRIAGE;
+    return event.type === CoreEventType.TRIAGE;
   }
 
   async run(): Promise<EventStatus> {
@@ -118,7 +120,7 @@ export class TriageFlow extends BaseFlow {
           // Route to active action chain
           const mainKey = latestChainThread.name.replace('actionchain-', '');
           this.dispatcher.states.actionchain = { main_key: mainKey };
-          this.dispatcher.eventchain.push(new Event(EventType.ACTION_CHAIN));
+          this.dispatcher.eventchain.push(new Event(CoreEventType.ACTION_CHAIN));
           return EventStatus.COMPLETE;
         }
       } catch {
@@ -128,7 +130,7 @@ export class TriageFlow extends BaseFlow {
 
     // 4. Handle click actions
     if (this.request.action === ActionType.CLICK) {
-      this.dispatcher.eventchain.push(new Event(EventType.CLICK));
+      this.dispatcher.eventchain.push(new Event(AppEventType.CLICK));
       return EventStatus.COMPLETE;
     }
 
@@ -139,18 +141,18 @@ export class TriageFlow extends BaseFlow {
 
       if (similarity === 'agentsupport') {
         await this.event.propagateMsg(new AgentSupportConfirmTemplate(this.request.language ?? undefined));
-        this.dispatcher.eventchain.push(new Event(EventType.ANALYSIS));
+        this.dispatcher.eventchain.push(new Event(CoreEventType.ANALYSIS));
         return EventStatus.COMPLETE;
       }
 
       if (similarity === 'greeting') {
-        this.dispatcher.eventchain.push(new Event(EventType.GREETING));
+        this.dispatcher.eventchain.push(new Event(AppEventType.GREETING));
         return EventStatus.COMPLETE;
       }
     }
 
     // 6. Default: route to ReAct intent extraction
-    this.dispatcher.eventchain.push(new Event(EventType.REACT_INTENT));
+    this.dispatcher.eventchain.push(new Event(ReactEventType.REACT_INTENT));
     return EventStatus.COMPLETE;
   }
 

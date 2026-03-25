@@ -1,9 +1,10 @@
 import {
   BaseFlow, Event, flowRegistry, getLogger,
-  EventType, EventStatus, ActionType, FlowMsgType,
+  EventStatus, ActionType, FlowMsgType,
   MemoryThreadName,
 } from '@olow/engine';
 import type { MessengerType, MemorySettings } from '@olow/engine';
+import { AppEventType } from '../events.js';
 const logger = getLogger();
 import { TextTemplate, I18n } from '@olow/templates';
 import * as mongo from '../storage/mongo.js';
@@ -12,7 +13,7 @@ import { config } from '../config/index.js';
 @flowRegistry.register()
 export class GreetingFlow extends BaseFlow {
   static canHandle(event: Event, _messengerType?: MessengerType): boolean {
-    return event.type === EventType.GREETING;
+    return event.type === AppEventType.GREETING;
   }
 
   async run(): Promise<EventStatus> {
@@ -53,7 +54,7 @@ export class GreetingFlow extends BaseFlow {
     }
 
     // Append MENU event to show greeting menu
-    this.dispatcher.eventchain.push(new Event(EventType.MENU));
+    this.dispatcher.eventchain.push(new Event(AppEventType.MENU));
 
     // Update user stats in background
     this.dispatcher.backgroundTasks.push(this.updateUserStats());

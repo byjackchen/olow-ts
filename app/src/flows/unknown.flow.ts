@@ -1,6 +1,6 @@
 import {
   BaseFlow, flowRegistry, getLogger,
-  EventType, EventStatus,
+  CoreEventType, EventStatus,
 } from '@olow/engine';
 import type { Event, MessengerType } from '@olow/engine';
 const logger = getLogger();
@@ -9,7 +9,7 @@ import { TextTemplate } from '@olow/templates';
 @flowRegistry.register()
 export class UnknownFlow extends BaseFlow {
   static canHandle(event: Event, _messengerType?: MessengerType): boolean {
-    return event.type === EventType.UNKNOWN;
+    return event.type === CoreEventType.UNKNOWN;
   }
 
   async run(): Promise<EventStatus> {

@@ -1,14 +1,15 @@
 import {
   BaseFlow, flowRegistry, getLogger,
-  EventType, EventStatus,
+  EventStatus,
 } from '@olow/engine';
 import type { Event, MessengerType } from '@olow/engine';
+import { AppEventType } from '../../events.js';
 const logger = getLogger();
 
 @flowRegistry.register()
 export class BotServicesNotificationFlow extends BaseFlow {
   static canHandle(event: Event, _messengerType?: MessengerType): boolean {
-    return event.type === EventType.BOT_SERVICES_NOTIFICATION;
+    return event.type === AppEventType.BOT_SERVICES_NOTIFICATION;
   }
 
   async run(): Promise<EventStatus> {

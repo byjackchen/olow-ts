@@ -74,3 +74,23 @@ export async function updateIncidentState(ticketSysId: string, state: string): P
     body: JSON.stringify({ state }),
   });
 }
+
+export interface GuestWifiInfo {
+  campus_name: string;
+  ssid: string;
+  password: string;
+  expired_date: string;
+  key: string;
+}
+
+export async function getGuestWifis(): Promise<GuestWifiInfo[]> {
+  const data = await snFetch('/api/x_tenam_it_chat_bo/guest_wifi_api/wifi');
+  const results = (data['result'] as Array<Record<string, unknown>>) ?? [];
+  return results.map((g) => ({
+    campus_name: (g['campus_name'] as string) ?? '',
+    ssid: (g['ssid'] as string) ?? '',
+    password: (g['password'] as string) ?? '',
+    expired_date: (g['expired_date'] as string) ?? '',
+    key: ((g['campus_name'] as string) ?? '').toLowerCase().replace(/[\s-]/g, ''),
+  }));
+}

@@ -1,6 +1,6 @@
 import {
   BaseFlow, Event, flowRegistry, getLogger,
-  EventType, EventStatus, ActionType, FlowMsgType, ACTION_CHAIN_ROOT_KEY,
+  CoreEventType, EventStatus, ActionType, FlowMsgType, ACTION_CHAIN_ROOT_KEY,
   BaseActionChain, UnexpectedInputException, NoActiveException,
   MemoryThreadName,
 } from '@olow/engine';
@@ -11,7 +11,7 @@ import { TextTemplate, I18n } from '@olow/templates';
 @flowRegistry.register()
 export class ActionChainFlow extends BaseFlow {
   static canHandle(event: Event, _messengerType?: MessengerType): boolean {
-    return event.type === EventType.ACTION_CHAIN;
+    return event.type === CoreEventType.ACTION_CHAIN;
   }
 
   async run(): Promise<EventStatus> {
@@ -42,7 +42,7 @@ export class ActionChainFlow extends BaseFlow {
         await this.event.propagateMsg(
           new TextTemplate([I18n.ACTIONCHAIN_CANCELLED, ` (${title})`]),
         );
-        this.dispatcher.eventchain.push(new Event(EventType.TRIAGE));
+        this.dispatcher.eventchain.push(new Event(CoreEventType.TRIAGE));
         return EventStatus.COMPLETE;
       }
     }
@@ -61,7 +61,7 @@ export class ActionChainFlow extends BaseFlow {
         await this.event.propagateMsg(
           new TextTemplate([I18n.ACTIONCHAIN_CANCELLED, ` (${title})`]),
         );
-        this.dispatcher.eventchain.push(new Event(EventType.TRIAGE));
+        this.dispatcher.eventchain.push(new Event(CoreEventType.TRIAGE));
         return EventStatus.COMPLETE;
       }
 
@@ -78,7 +78,7 @@ export class ActionChainFlow extends BaseFlow {
     }
 
     // Append analysis event
-    this.dispatcher.eventchain.push(new Event(EventType.ANALYSIS));
+    this.dispatcher.eventchain.push(new Event(CoreEventType.ANALYSIS));
     return EventStatus.COMPLETE;
   }
 

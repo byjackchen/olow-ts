@@ -1,8 +1,9 @@
 import {
   BaseFlow, Event, flowRegistry, getLogger,
-  EventType, EventStatus, FlowMsgType,
+  CoreEventType, EventStatus, FlowMsgType,
 } from '@olow/engine';
 import type { MessengerType } from '@olow/engine';
+import { ReactEventType } from './events.js';
 import { getReactAgentConfig } from './config.js';
 import { getReactTemplateProvider } from './templates.js';
 import { reactIntentPrompt } from './prompts.js';
@@ -12,7 +13,7 @@ const logger = getLogger();
 @flowRegistry.register()
 export class ReactIntentFlow extends BaseFlow {
   static canHandle(event: Event, _messengerType?: MessengerType): boolean {
-    return event.type === EventType.REACT_INTENT;
+    return event.type === ReactEventType.REACT_INTENT;
   }
 
   async run(): Promise<EventStatus> {
@@ -38,7 +39,7 @@ export class ReactIntentFlow extends BaseFlow {
     }
 
     this.buildAvailableTools();
-    this.dispatcher.eventchain.push(new Event(EventType.REACT_PRECALL));
+    this.dispatcher.eventchain.push(new Event(ReactEventType.REACT_PRECALL));
     return EventStatus.COMPLETE;
   }
 
@@ -74,7 +75,7 @@ export class ReactIntentFlow extends BaseFlow {
         chain.push({ type: 'question', question: rewritten, original: content });
 
         if (parsed['is_relevant'] === false) {
-          this.dispatcher.eventchain.push(new Event(EventType.ANALYSIS));
+          this.dispatcher.eventchain.push(new Event(CoreEventType.ANALYSIS));
         }
       } else {
         chain.push({ type: 'question', question: content });

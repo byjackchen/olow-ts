@@ -1,16 +1,17 @@
 import {
   BaseFlow, Event, flowRegistry, getLogger,
-  EventType, EventStatus, FlowMsgType,
+  CoreEventType, EventStatus, FlowMsgType,
   MemoryThreadName,
 } from '@olow/engine';
 import type { MessengerType, MemorySettings } from '@olow/engine';
+import { AppEventType } from '../events.js';
 const logger = getLogger();
 import { TextTemplate } from '@olow/templates';
 
 @flowRegistry.register()
 export class CommandFlow extends BaseFlow {
   static canHandle(event: Event, _messengerType?: MessengerType): boolean {
-    return event.type === EventType.COMMAND;
+    return event.type === CoreEventType.COMMAND;
   }
 
   async run(): Promise<EventStatus> {
@@ -22,7 +23,7 @@ export class CommandFlow extends BaseFlow {
     const cmd = parts[0]?.toLowerCase() ?? '';
 
     if (cmd === '/menu' || cmd === '/start') {
-      this.dispatcher.eventchain.push(new Event(EventType.MENU));
+      this.dispatcher.eventchain.push(new Event(AppEventType.MENU));
     } else if (cmd === '/language') {
       const lang = parts[1]?.toLowerCase();
       if (lang === 'cn' || lang === 'en') {
@@ -36,7 +37,7 @@ export class CommandFlow extends BaseFlow {
             memory.setThread(MemoryThreadName.SETTINGS, { info_maps: { language: lang } });
           }
         }
-        this.dispatcher.eventchain.push(new Event(EventType.MENU));
+        this.dispatcher.eventchain.push(new Event(AppEventType.MENU));
       } else {
         await this.event.propagateMsg(
           new TextTemplate(['Usage: /language cn or /language en']),

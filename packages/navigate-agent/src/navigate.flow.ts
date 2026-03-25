@@ -1,8 +1,9 @@
 import {
   BaseFlow, Event, flowRegistry, getLogger,
-  EventType, EventStatus, FlowMsgType,
+  EventStatus, FlowMsgType,
 } from '@olow/engine';
 import type { MessengerType } from '@olow/engine';
+import { NavigateEventType } from './events.js';
 import { getNavigateTemplateProvider } from './templates.js';
 
 const logger = getLogger();
@@ -10,7 +11,7 @@ const logger = getLogger();
 @flowRegistry.register()
 export class NavigateFlow extends BaseFlow {
   static canHandle(event: Event, _messengerType?: MessengerType): boolean {
-    return event.type === EventType.REACT_NAVIGATE;
+    return event.type === NavigateEventType.REACT_NAVIGATE;
   }
 
   async run(): Promise<EventStatus> {

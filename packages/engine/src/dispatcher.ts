@@ -10,7 +10,6 @@ import {
   type SpaceType,
   type MessengerType,
   MessengerType as MT,
-  ActionType as AT,
   type RequesterType,
   RequesterType as RT,
   type SystemName,
@@ -51,6 +50,7 @@ export interface DispatcherEngineConfig {
   post_msg_verbose: boolean;
   developers: string[];
   administrators: string[];
+  archivableSystemActions?: string[];
 }
 
 const DEFAULT_DISPATCHER_CONFIG: DispatcherEngineConfig = {
@@ -58,16 +58,18 @@ const DEFAULT_DISPATCHER_CONFIG: DispatcherEngineConfig = {
   post_msg_verbose: false,
   developers: [],
   administrators: [],
+  archivableSystemActions: [],
 };
 
 let _dispatcherConfig: DispatcherEngineConfig = DEFAULT_DISPATCHER_CONFIG;
+let _archivableActions: ReadonlySet<string> = new Set();
 
 // Module-level constants (avoid per-call allocation)
 const THINK_TYPES: FlowMsgType[] = [FMT.THINK_L1, FMT.THINK_L2];
-const ARCHIVABLE_SYSTEM_ACTIONS: ReadonlySet<string> = new Set([AT.SN_TICKET_CLOSE, AT.SN_TICKET_SURVEY]);
 
 export function setDispatcherConfig(cfg: DispatcherEngineConfig): void {
   _dispatcherConfig = cfg;
+  _archivableActions = new Set(cfg.archivableSystemActions ?? []);
 }
 
 // ─── Dispatcher ───
@@ -460,7 +462,7 @@ export class Dispatcher implements IDispatcher {
 
     if (
       this.request.requester.type !== RT.USER &&
-      !ARCHIVABLE_SYSTEM_ACTIONS.has(this.request.action)
+      !_archivableActions.has(this.request.action)
     ) {
       logger.info('Skipped cycle archive for non-user requester');
       return;

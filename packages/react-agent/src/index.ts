@@ -6,6 +6,9 @@ export { setReactAgentConfig, getReactAgentConfig, type ReactAgentConfig } from 
 // Templates
 export { setReactTemplateProvider, getReactTemplateProvider, type IReactTemplateProvider } from './templates.js';
 
+// Events
+export { ReactEventType } from './events.js';
+
 // Prompts
 export { reactIntentPrompt, reactPlanPrompt, reactResponsePrompt } from './prompts.js';
 

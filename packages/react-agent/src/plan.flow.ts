@@ -1,8 +1,9 @@
 import {
   BaseFlow, Event, flowRegistry, getLogger,
-  EventType, EventStatus, FlowMsgType,
+  EventStatus, FlowMsgType,
 } from '@olow/engine';
 import type { MessengerType } from '@olow/engine';
+import { ReactEventType } from './events.js';
 import { getReactAgentConfig } from './config.js';
 import { getReactTemplateProvider } from './templates.js';
 import { reactPlanPrompt } from './prompts.js';
@@ -12,7 +13,7 @@ const logger = getLogger();
 @flowRegistry.register()
 export class ReactPlanFlow extends BaseFlow {
   static canHandle(event: Event, _messengerType?: MessengerType): boolean {
-    return event.type === EventType.REACT_PLAN;
+    return event.type === ReactEventType.REACT_PLAN;
   }
 
   async run(): Promise<EventStatus> {
@@ -24,7 +25,7 @@ export class ReactPlanFlow extends BaseFlow {
     reactStates.rounds_count = (reactStates.rounds_count ?? 0) + 1;
     if (reactStates.rounds_count > cfg.max_rounds) {
       logger.warn(`Max rounds (${cfg.max_rounds}) exceeded, forcing response`);
-      this.dispatcher.eventchain.push(new Event(EventType.REACT_RESPONSE));
+      this.dispatcher.eventchain.push(new Event(ReactEventType.REACT_RESPONSE));
       return EventStatus.COMPLETE;
     }
 
@@ -40,7 +41,7 @@ export class ReactPlanFlow extends BaseFlow {
 
     if (!success || !result || typeof result !== 'object') {
       logger.error('Plan LLM returned invalid response, forcing response');
-      this.dispatcher.eventchain.push(new Event(EventType.REACT_RESPONSE));
+      this.dispatcher.eventchain.push(new Event(ReactEventType.REACT_RESPONSE));
       return EventStatus.COMPLETE;
     }
 
@@ -100,19 +101,19 @@ export class ReactPlanFlow extends BaseFlow {
         tpl.text([`🔧 ${toolClass?.toolTag?.labelName ?? action}`]),
         undefined, undefined, FlowMsgType.THINK_L2,
       );
-      this.dispatcher.eventchain.push(new Event(EventType.REACT_ACT));
+      this.dispatcher.eventchain.push(new Event(ReactEventType.REACT_ACT));
     } else if (finalAnswer) {
       chain.push({
         type: 'final_answer', final_answer: finalAnswer,
         main_sources: parsed['main_sources'], other_sources: parsed['other_sources'],
       });
-      this.dispatcher.eventchain.push(new Event(EventType.REACT_RESPONSE));
+      this.dispatcher.eventchain.push(new Event(ReactEventType.REACT_RESPONSE));
     } else if (clarification) {
       chain.push({ type: 'clarification', clarification });
-      this.dispatcher.eventchain.push(new Event(EventType.REACT_RESPONSE));
+      this.dispatcher.eventchain.push(new Event(ReactEventType.REACT_RESPONSE));
     } else {
       logger.warn('Plan produced no action, final_answer, or clarification');
-      this.dispatcher.eventchain.push(new Event(EventType.REACT_RESPONSE));
+      this.dispatcher.eventchain.push(new Event(ReactEventType.REACT_RESPONSE));
     }
   }
 }

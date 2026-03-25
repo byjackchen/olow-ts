@@ -1,8 +1,9 @@
 import {
   BaseFlow, Event, flowRegistry, getLogger,
-  EventType, EventStatus, FlowMsgType,
+  CoreEventType, EventStatus, FlowMsgType,
 } from '@olow/engine';
 import type { MessengerType } from '@olow/engine';
+import { ReactEventType } from './events.js';
 import { getReactTemplateProvider } from './templates.js';
 
 const logger = getLogger();
@@ -10,7 +11,7 @@ const logger = getLogger();
 @flowRegistry.register()
 export class ReactResponseFlow extends BaseFlow {
   static canHandle(event: Event, _messengerType?: MessengerType): boolean {
-    return event.type === EventType.REACT_RESPONSE;
+    return event.type === ReactEventType.REACT_RESPONSE;
   }
 
   async run(): Promise<EventStatus> {
@@ -33,7 +34,7 @@ export class ReactResponseFlow extends BaseFlow {
       undefined, undefined, FlowMsgType.ANSWER,
     );
 
-    this.dispatcher.eventchain.push(new Event(EventType.ANALYSIS));
+    this.dispatcher.eventchain.push(new Event(CoreEventType.ANALYSIS));
     return EventStatus.COMPLETE;
   }
 

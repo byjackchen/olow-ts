@@ -3,6 +3,9 @@
 // Templates
 export { setNavigateTemplateProvider, getNavigateTemplateProvider, type INavigateTemplateProvider } from './templates.js';
 
+// Events
+export { NavigateEventType } from './events.js';
+
 // Prompts
 export { navigatePrompt } from './prompts.js';
 

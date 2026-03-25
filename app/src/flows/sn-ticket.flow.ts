@@ -1,15 +1,16 @@
 import {
   BaseFlow, flowRegistry, getLogger,
-  EventType, EventStatus, FlowMsgType,
+  EventStatus, FlowMsgType,
 } from '@olow/engine';
 import type { Event, MessengerType } from '@olow/engine';
+import { AppEventType } from '../events.js';
 const logger = getLogger();
 import { TextTemplate } from '@olow/templates';
 
 @flowRegistry.register()
 export class SnTicketFlow extends BaseFlow {
   static canHandle(event: Event, _messengerType?: MessengerType): boolean {
-    return event.type === EventType.TICKET_PUSH;
+    return event.type === AppEventType.TICKET_PUSH;
   }
 
   async run(): Promise<EventStatus> {

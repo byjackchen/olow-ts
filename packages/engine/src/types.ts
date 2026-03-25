@@ -83,46 +83,21 @@ export const FlowMsgType = {
 } as const;
 export type FlowMsgType = (typeof FlowMsgType)[keyof typeof FlowMsgType];
 
-export const EventType = {
-  // Core Events
-  COMMAND: 'command',
+// EventType is an open string — packages extend by defining their own const objects.
+// Engine only defines the minimal core. Use string literal values directly.
+export type EventType = string;
+
+export const CoreEventType = {
   TRIAGE: 'triage',
+  COMMAND: 'command',
   UNKNOWN: 'unknown',
-  // ReAct Agent Events
-  REACT_INTENT: 'react_intent',
-  REACT_PRECALL: 'react_precall',
-  REACT_PLAN: 'react_plan',
-  REACT_ACT: 'react_act',
-  REACT_RESPONSE: 'react_answer',
-  REACT_NAVIGATE: 'react_navigate',
-  // Analysis Event
   ANALYSIS: 'analysis',
-  // Functional Events
-  CLICK: 'click',
-  MENU: 'menu',
-  EXPAND_FAQ: 'expand_faq',
-  GROUPCHAT_QUERY: 'groupchat_query',
-  GROUPCHAT_CLICK: 'groupchat_click',
-  GREETING: 'greeting',
-  ASR: 'asr',
-  OCR: 'ocr',
-  // Ticketing Events
-  AGENT_SUPPORT: 'agent_support',
-  TICKET_PUSH: 'ticket_push',
-  QUICK_TICKET: 'quick_ticket',
-  AGENT_POOL_PUSH: 'agent_pool_notice',
   ACTION_CHAIN: 'action_chain',
-  // Service Events
-  CACHE_SYNC: 'cache_sync',
-  SN_SYNC_FAQ: 'sn_sync_faq',
-  USER_DETAILS: 'user_details',
-  NOTIFICATION: 'notification',
-  BOTJOBS: 'BOTJOBS',
-  BOT_SERVICES_USER: 'bot_services_user',
-  BOT_SERVICES_TICKET: 'bot_services_ticket',
-  BOT_SERVICES_NOTIFICATION: 'bot_services_notification',
 } as const;
-export type EventType = (typeof EventType)[keyof typeof EventType];
+
+// Backward compat — re-export CoreEventType as EventType const so existing
+// `EventType.TRIAGE` still works. Packages add their own const objects.
+export const EventType = CoreEventType;
 
 export const EventStatus = {
   AWAITING: 'awaiting',
@@ -133,7 +108,10 @@ export const EventStatus = {
 } as const;
 export type EventStatus = (typeof EventStatus)[keyof typeof EventStatus];
 
-export const ActionType = {
+// ActionType is an open string — packages extend by defining their own const objects.
+export type ActionType = string;
+
+export const CoreActionType = {
   ENTER_CHAT: 'enter_chat',
   COMMAND: 'command',
   CLICK: 'click',
@@ -142,31 +120,10 @@ export const ActionType = {
   IMAGE: 'image',
   VOICE: 'voice',
   MIXED: 'mixed',
-  // ServiceNow actions
-  SN_TICKET_CLOSE: 'sn_ticket_close',
-  SN_TICKET_REASSIGN: 'sn_ticket_reassign',
-  SN_TICKET_SOLPROPOSED: 'sn_ticket_solproposed',
-  SN_TICKET_UNASSIGN: 'sn_ticket_unassign',
-  SN_TICKET_ONHOLD: 'sn_ticket_onhold',
-  SN_TICKET_SURVEY: 'sn_ticket_survey',
-  SN_AGENT_ASSIGN: 'sn_agent_assign',
-  SN_AGENT_LOGOUT: 'sn_agent_logout',
-  SN_AGENT_BUSY: 'sn_agent_busy',
-  // Cache
-  CACHE_SYNC_TICKET: 'cache_sync_ticket',
-  // FAQ
-  FAQ_DEPLOY: 'faq_deploy',
-  FAQ_RECALL: 'faq_recall',
-  FAQ_POLISH: 'faq_polish',
-  FAQ_RECALL_ALL: 'faq_recall_all',
-  // Service
-  NOTIFICATION: 'notification',
-  BOTJOBS: 'BOTJOBS',
-  BOT_SERVICES: 'bot_services',
-  // Unknown
   UNKNOWN: 'unknown',
 } as const;
-export type ActionType = (typeof ActionType)[keyof typeof ActionType];
+
+export const ActionType = CoreActionType;
 
 export const ToolArgumentType = {
   WECOM_MEDIA_ID: 'WeCom_Media_ID',

@@ -1,9 +1,10 @@
 import {
   BaseFlow, Event, flowRegistry, getLogger,
-  EventType, EventStatus, FlowMsgType, ACTION_CHAIN_ROOT_KEY,
+  CoreEventType, EventStatus, FlowMsgType, ACTION_CHAIN_ROOT_KEY,
   MemoryThreadName,
 } from '@olow/engine';
 import type { MessengerType } from '@olow/engine';
+import { AppEventType } from '../events.js';
 const logger = getLogger();
 import { TextTemplate, I18n } from '@olow/templates';
 import * as mongo from '../storage/mongo.js';
@@ -11,7 +12,7 @@ import * as mongo from '../storage/mongo.js';
 @flowRegistry.register()
 export class ClickFlow extends BaseFlow {
   static canHandle(event: Event, _messengerType?: MessengerType): boolean {
-    return event.type === EventType.CLICK;
+    return event.type === AppEventType.CLICK;
   }
 
   async run(): Promise<EventStatus> {
@@ -25,30 +26,30 @@ export class ClickFlow extends BaseFlow {
 
     // Greeting
     if (key === 'greeting') {
-      this.dispatcher.eventchain.push(new Event(EventType.GREETING));
+      this.dispatcher.eventchain.push(new Event(AppEventType.GREETING));
       return EventStatus.COMPLETE;
     }
 
     // Menu
     if (key.startsWith('menu-')) {
-      this.dispatcher.eventchain.push(new Event(EventType.MENU));
+      this.dispatcher.eventchain.push(new Event(AppEventType.MENU));
       return EventStatus.COMPLETE;
     }
 
     // Agent support
     if (key === 'agentsupport') {
       await this.event.propagateMsg(new TextTemplate([I18n.AGENT_SUPPORT_CONFIRM]));
-      this.dispatcher.eventchain.push(new Event(EventType.ANALYSIS));
+      this.dispatcher.eventchain.push(new Event(CoreEventType.ANALYSIS));
       return EventStatus.COMPLETE;
     }
     if (key === 'agentsupport-confirm') {
-      this.dispatcher.eventchain.push(new Event(EventType.AGENT_SUPPORT));
+      this.dispatcher.eventchain.push(new Event(AppEventType.AGENT_SUPPORT));
       return EventStatus.COMPLETE;
     }
 
     // FAQ expansion
     if (key.startsWith('faq-')) {
-      this.dispatcher.eventchain.push(new Event(EventType.EXPAND_FAQ));
+      this.dispatcher.eventchain.push(new Event(AppEventType.EXPAND_FAQ));
       return EventStatus.COMPLETE;
     }
 
@@ -83,13 +84,13 @@ export class ClickFlow extends BaseFlow {
           else mem.setThread(MemoryThreadName.SETTINGS, { info_maps: { language: lang } });
         } catch { /* non-fatal */ }
       }
-      this.dispatcher.eventchain.push(new Event(EventType.MENU));
+      this.dispatcher.eventchain.push(new Event(AppEventType.MENU));
       return EventStatus.COMPLETE;
     }
 
     // User details
     if (key === 'userdetails') {
-      this.dispatcher.eventchain.push(new Event(EventType.USER_DETAILS));
+      this.dispatcher.eventchain.push(new Event(AppEventType.USER_DETAILS));
       return EventStatus.COMPLETE;
     }
 
@@ -98,14 +99,14 @@ export class ClickFlow extends BaseFlow {
       const mainKey = key.split('-').slice(0, 2).join('-');
       if (this.dispatcher.actionchainsMap.has(mainKey)) {
         this.dispatcher.states.actionchain = { main_key: mainKey };
-        this.dispatcher.eventchain.push(new Event(EventType.ACTION_CHAIN));
+        this.dispatcher.eventchain.push(new Event(CoreEventType.ACTION_CHAIN));
         return EventStatus.COMPLETE;
       }
     }
 
     // Unknown click
     logger.warn(`Unknown click key: ${key}`);
-    this.dispatcher.eventchain.push(new Event(EventType.UNKNOWN));
+    this.dispatcher.eventchain.push(new Event(CoreEventType.UNKNOWN));
     return EventStatus.COMPLETE;
   }
 

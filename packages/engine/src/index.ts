@@ -7,7 +7,9 @@ export { OlowEngine, OlowEngineInstance, type MessengerFactory } from './olow.js
 export { Dispatcher, setDispatcherConfig, type DispatcherEngineConfig } from './dispatcher.js';
 export {
   Event, EventChain, Request, ResponseChain, SystemRequester,
+  registerSystemActionParser, registerEventRouter,
   type FlowMsg, type StreamDeltaFlowMsg, type UniversalResponse, type IUser,
+  type SystemActionParser, type EventRouter,
 } from './events.js';
 
 // Registry
@@ -32,7 +34,7 @@ export type { IMessenger, RequestInitResult, SayResult } from './messengers.js';
 export {
   ResponseMode, SpaceType, RequesterType, UserIdType, ChannelType,
   SystemName, SiteName, MessengerType, SentToType, MsgType, FlowMsgType,
-  EventType, EventStatus, ActionType, ToolArgumentType, Language, TicketStates,
+  EventType, CoreEventType, EventStatus, ActionType, CoreActionType, ToolArgumentType, Language, TicketStates,
   FunctionCallPredictionMode, ACTION_CHAIN_ROOT_KEY,
   ReActStatesSchema, FlowStatesSchema, DecodedMsgSchema, StreamDeltaMsgSchema,
   BotEngineStreamOutputSchema, MessageQueue,
