@@ -1,7 +1,7 @@
 {
-  "name": "@olow/engine",
+  "name": "@olow/memory",
   "version": "1.0.0",
-  "description": "Olow chatbot engine - core framework",
+  "description": "Olow memory system - per-user threaded memory with context graph",
   "type": "module",
   "engines": {
     "node": ">=22.0.0"
@@ -19,12 +19,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@olow/memory": "*",
-    "fast-xml-parser": "^5.2.3",
     "zod": "^3.25.67",
-    "pino": "^9.7.0",
-    "pino-pretty": "^13.0.0",
-    "@modelcontextprotocol/sdk": "^1.12.3"
+    "graphology": "^0.25.4",
+    "graphology-types": "^0.24.7"
   },
   "devDependencies": {
     "typescript": "^5.8.3",

@@ -64,6 +64,12 @@ export { createLogger, setLogger, getLogger, type LoggerConfig } from './logger.
 // User
 export { User } from './user.js';
 
+// Kits (utilities)
+export * as promptKit from './prompt.kit.js';
+export { StructuralStreamParser, Section } from './stream-parser.js';
+export { textAtom, linkAtom, atAtom, buildRichtext, truncateForWecom, type RichtextAtom } from './format.kit.js';
+export { xmlToDict, deepMerge, dedup, truncate, bytesLength } from './logic.kit.js';
+
 // MCP
 export { toolTagToMcpSchema, mcpSchemaToToolParameters } from './mcp/schema-adapter.js';
 export { McpToolProxy } from './mcp/proxy.js';

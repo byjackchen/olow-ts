@@ -13,10 +13,7 @@ export class ReactPrecallFlow extends BaseFlow {
 
   async run(): Promise<EventStatus> {
     logger.info(`ReactPrecallFlow handling precall for user ${this.request.requester.id}`);
-
-    // Pass-through: chain directly to REACT_PLAN
     this.dispatcher.eventchain.push(new Event(EventType.REACT_PLAN));
-
     return EventStatus.COMPLETE;
   }
 }

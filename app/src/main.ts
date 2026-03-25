@@ -17,6 +17,31 @@ import * as mongo from './storage/mongo.js';
 import { Dispatcher, setDispatcherConfig } from '@olow/engine';
 import { flowRegistry, toolRegistry, actionchainRegistry, setSpace } from '@olow/engine';
 import { ResponseMode, MessengerType, RequesterType, SystemName } from '@olow/engine';
+import { setReactTemplateProvider, initReactAgent } from '@olow/react-agent';
+import { setNavigateTemplateFactory } from '@olow/navigate-agent';
+import { AiIdleTemplate, AiReActAnswerTemplate, type Recommendation } from './templates/ai.template.js';
+import { TextTemplate } from './templates/text.template.js';
+import { I18n } from './templates/i18n.js';
+
+// Wire react agent templates
+setReactTemplateProvider({
+  aiIdle: (text) => new AiIdleTemplate([text]),
+  text: (lines) => new TextTemplate(lines),
+  aiReActAnswer: (opts) => new AiReActAnswerTemplate({ ...opts, recommendations: opts.recommendations as Recommendation[] }),
+  i18n: {
+    AI_INTENT: I18n.AI_INTENT,
+    AI_REACT_PLAN: I18n.AI_REACT_PLAN,
+    AI_REACT_ACT: I18n.AI_REACT_ACT,
+    NO_ANSWER_FALLBACK: I18n.NO_ANSWER_FALLBACK,
+  },
+});
+initReactAgent({
+  intent_mode: config.engine.react_agent.intent_mode,
+  max_rounds: config.engine.react_agent.max_rounds,
+});
+
+// Wire navigate agent templates
+setNavigateTemplateFactory((lines) => new TextTemplate(lines));
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 

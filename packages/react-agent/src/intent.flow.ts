@@ -2,12 +2,21 @@ import {
   BaseFlow, Event, Request, flowRegistry, getLogger,
   EventType, EventStatus, FlowMsgType,
 } from '@olow/engine';
+import { reactIntentPrompt } from './prompts.js';
 import type { MessengerType } from '@olow/engine';
+import { getReactTemplateProvider } from './templates.js';
 const logger = getLogger();
-import { AiIdleTemplate } from '../../templates/ai.template.js';
-import { I18n } from '../../templates/i18n.js';
-import { config } from '../../config/index.js';
-import * as promptKit from '../../kits/prompt.kit.js';
+
+export interface ReactAgentConfig {
+  intent_mode: string;
+  max_rounds: number;
+}
+
+let _reactConfig: ReactAgentConfig = { intent_mode: 'multi-turns', max_rounds: 5 };
+
+export function setReactAgentConfig(cfg: ReactAgentConfig): void {
+  _reactConfig = cfg;
+}
 
 @flowRegistry.register()
 export class ReactIntentFlow extends BaseFlow {
@@ -16,29 +25,23 @@ export class ReactIntentFlow extends BaseFlow {
   }
 
   async run(): Promise<EventStatus> {
+    const tpl = getReactTemplateProvider();
     const userId = this.request.requester.id;
     logger.info(`ReactIntentFlow analyzing intent for user ${userId}`);
 
-    const rawMode = config.engine.react_agent.intent_mode;
-    const mode = rawMode.replace(/_/g, '-').toLowerCase();
+    const mode = _reactConfig.intent_mode.replace(/_/g, '-').toLowerCase();
     const content = this.request.content.mixedText;
 
-    // Initialize react states
     if (!this.dispatcher.states.react.process_chain) {
       this.dispatcher.states.react.process_chain = [];
     }
 
-    // Send thinking indicator
     await this.event.propagateMsg(
-      new AiIdleTemplate([I18n.AI_INTENT]),
-      undefined,
-      undefined,
-      FlowMsgType.THINK_L1,
+      tpl.aiIdle(tpl.i18n.AI_INTENT()),
+      undefined, undefined, FlowMsgType.THINK_L1,
     );
 
     if (mode === 'single-rewritten') {
-      // Full query rewriting mode with LLM
-      // Get conversation history from graph memory
       let chatHistory = '';
       if ('memory' in this.request.requester && typeof (this.request.requester as Record<string, unknown>)['memory'] === 'function') {
         try {
@@ -48,14 +51,12 @@ export class ReactIntentFlow extends BaseFlow {
             .filter((n: { type: string }) => n.type === 'content' || n.type === 'rewrite')
             .map((n: { text: string }) => n.text);
           chatHistory = contentNodes.join('\n');
-        } catch {
-          chatHistory = '';
-        }
+        } catch { chatHistory = ''; }
       }
 
       try {
         const [success, result] = await this.broker.llm.callLlm(
-          promptKit.reactIntentPrompt(content, chatHistory || undefined),
+          reactIntentPrompt(content, chatHistory || undefined),
           { jsonMode: 'json_fence' },
         );
 
@@ -64,34 +65,22 @@ export class ReactIntentFlow extends BaseFlow {
           const rewrittenQuestion = (parsed['rewritten_question'] as string) ?? content;
           const isRelevant = parsed['is_relevant'] !== false;
 
-          // Append to process chain
           this.dispatcher.states.react.process_chain.push({
-            type: 'question',
-            question: rewrittenQuestion,
-            original: content,
+            type: 'question', question: rewrittenQuestion, original: content,
           });
 
-          // If not relevant, route to analysis instead
           if (!isRelevant) {
             this.dispatcher.eventchain.push(new Event(EventType.ANALYSIS));
             return EventStatus.COMPLETE;
           }
         } else {
-          // LLM failed — use original query
-          this.dispatcher.states.react.process_chain.push({
-            type: 'question',
-            question: content,
-          });
+          this.dispatcher.states.react.process_chain.push({ type: 'question', question: content });
         }
       } catch (err) {
         logger.error({ msg: 'Intent rewrite LLM call failed', err });
-        this.dispatcher.states.react.process_chain.push({
-          type: 'question',
-          question: content,
-        });
+        this.dispatcher.states.react.process_chain.push({ type: 'question', question: content });
       }
     } else {
-      // Multi-turns mode — use conversation history directly
       let histories: string[] = [];
       if ('memory' in this.request.requester && typeof (this.request.requester as Record<string, unknown>)['memory'] === 'function') {
         try {
@@ -100,38 +89,24 @@ export class ReactIntentFlow extends BaseFlow {
           histories = graphThread.memory.nodes
             .filter((n: { type: string }) => n.type === 'content' || n.type === 'rewrite')
             .map((n: { text: string }) => n.text);
-        } catch {
-          histories = [];
-        }
+        } catch { histories = []; }
       }
 
       if (histories.length > 0) {
-        this.dispatcher.states.react.process_chain.push({
-          type: 'histories',
-          histories: histories.join('\n'),
-        });
+        this.dispatcher.states.react.process_chain.push({ type: 'histories', histories: histories.join('\n') });
       }
-
-      this.dispatcher.states.react.process_chain.push({
-        type: 'question',
-        question: content,
-      });
+      this.dispatcher.states.react.process_chain.push({ type: 'question', question: content });
     }
 
-    // Build initial available tools list
     const availableTools: Record<string, unknown>[] = [];
-    for (const [name, tool] of this.dispatcher.toolsMap) {
+    for (const [, tool] of this.dispatcher.toolsMap) {
       const t = tool as { toolTag?: { name: string; description: string; isSpecialized: boolean } };
       if (t.toolTag && !t.toolTag.isSpecialized) {
-        availableTools.push({
-          name: t.toolTag.name,
-          description: t.toolTag.description,
-        });
+        availableTools.push({ name: t.toolTag.name, description: t.toolTag.description });
       }
     }
     this.dispatcher.states.react.available_tools = availableTools;
 
-    // Chain to precall step
     this.dispatcher.eventchain.push(new Event(EventType.REACT_PRECALL));
     return EventStatus.COMPLETE;
   }

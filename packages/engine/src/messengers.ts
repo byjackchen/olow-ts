@@ -10,7 +10,7 @@ import type {
   ChannelType,
 } from './types.js';
 import { MessengerType as MT } from './types.js';
-import { ContentBlocks } from './content-blocks.js';
+import { ContentBlocks, determineActionType } from './content-blocks.js';
 import type { ITemplate } from './base-template.js';
 import type { IUser } from './events.js';
 
@@ -106,7 +106,6 @@ class WebBotMessenger implements IMessenger {
       id: userId,
     };
 
-    const { determineActionType } = require('./content-blocks.js');
     const contentBlocks = content ? ContentBlocks.fromText(content) : ContentBlocks.empty();
     const detectedAction = action === 'enter_chat' ? 'enter_chat' : determineActionType(contentBlocks);
 

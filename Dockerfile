@@ -2,26 +2,28 @@
 FROM node:22-alpine AS builder
 WORKDIR /app
 COPY package.json package-lock.json ./
+COPY packages/memory/package.json ./packages/memory/
 COPY packages/engine/package.json ./packages/engine/
-COPY apps/olow-app/package.json ./apps/olow-app/
+COPY packages/react-agent/package.json ./packages/react-agent/
+COPY packages/navigate-agent/package.json ./packages/navigate-agent/
+COPY app/package.json ./app/
 RUN npm ci
-COPY packages/engine/ ./packages/engine/
-COPY apps/olow-app/ ./apps/olow-app/
-RUN npm run build --workspace=@olow/engine && npm run build --workspace=olow-app
+COPY packages/ ./packages/
+COPY app/ ./app/
+RUN npm run build
 
 # Runtime stage
 FROM node:22-alpine
 WORKDIR /app
 RUN adduser -D appuser
 COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/packages/engine/dist ./packages/engine/dist
-COPY --from=builder /app/packages/engine/package.json ./packages/engine/
-COPY --from=builder /app/apps/olow-app/dist ./apps/olow-app/dist
-COPY --from=builder /app/apps/olow-app/config ./apps/olow-app/config
-COPY --from=builder /app/apps/olow-app/package.json ./apps/olow-app/
+COPY --from=builder /app/packages/ ./packages/
+COPY --from=builder /app/app/dist ./app/dist
+COPY --from=builder /app/app/config ./app/config
+COPY --from=builder /app/app/package.json ./app/
 COPY package.json ./
 RUN mkdir -p /app/logs && chown -R appuser:appuser /app
 USER appuser
-WORKDIR /app/apps/olow-app
+WORKDIR /app/app
 EXPOSE 3001
 CMD ["node", "dist/main.js"]

@@ -17,6 +17,8 @@
   },
   "dependencies": {
     "@olow/engine": "*",
+    "@olow/react-agent": "*",
+    "@olow/navigate-agent": "*",
     "fastify": "^5.3.3",
     "zod": "^3.25.67",
     "mongodb": "^6.16.0",
