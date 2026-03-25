@@ -343,6 +343,11 @@ export async function getAllFaqs(): Promise<Document[]> {
   return faqs.find().toArray();
 }
 
+export async function getFaqsByIds(ids: string[]): Promise<Document[]> {
+  if (ids.length === 0) return [];
+  return faqs.find({ id: { $in: ids } }).toArray();
+}
+
 // ─── Tickets ───
 
 export async function getAllTickets(): Promise<Document[]> {

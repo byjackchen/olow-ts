@@ -29,13 +29,22 @@ export class ReactPlanFlow extends BaseFlow {
       return EventStatus.COMPLETE;
     }
 
-    const question = this.extractQuestion();
     const availableTools = this.extractAvailableTools();
-    const prompt = reactPlanPrompt(question, availableTools);
-
-    await this.event.propagateMsg(
-      tpl.idle(tpl.i18n.PLAN()), undefined, undefined, FlowMsgType.THINK_L1,
+    const lang = this.request.language ?? 'en';
+    const prompt = reactPlanPrompt(
+      processChain,
+      reactStates.user_preferences ?? [],
+      availableTools,
+      reactStates.rounds_count,
+      cfg.max_rounds,
+      lang,
     );
+
+    if (reactStates.rounds_count === 1) {
+      await this.event.propagateMsg(
+        tpl.idle(tpl.i18n.PLAN()), undefined, undefined, FlowMsgType.THINK_L2,
+      );
+    }
 
     const [success, result] = await this.callLlm(prompt);
 
@@ -49,23 +58,21 @@ export class ReactPlanFlow extends BaseFlow {
     return EventStatus.COMPLETE;
   }
 
-  private extractQuestion(): string {
-    const entry = this.dispatcher.states.react.process_chain.find(
-      (e) => (e as Record<string, unknown>)['type'] === 'question',
-    ) as Record<string, unknown> | undefined;
-    return (entry?.['question'] as string) ?? this.request.content.mixedText;
-  }
-
-  private extractAvailableTools(): Array<{ name: string; description: string }> {
-    return (this.dispatcher.states.react.available_tools ?? []).map((t) => ({
-      name: (t as Record<string, unknown>)['name'] as string,
-      description: (t as Record<string, unknown>)['description'] as string,
-    }));
+  private extractAvailableTools(): Array<{ name: string; description: string; parameters?: Record<string, { type?: string; required?: boolean; description?: string }> }> {
+    return (this.dispatcher.states.react.available_tools ?? []).map((t) => {
+      const tool = t as Record<string, unknown>;
+      return {
+        name: tool['name'] as string,
+        description: tool['description'] as string,
+        parameters: tool['parameters'] as Record<string, { type?: string; required?: boolean; description?: string }> | undefined,
+      };
+    });
   }
 
   private async callLlm(prompt: string): Promise<[boolean, unknown]> {
     try {
       if (this.event.msgQueue) {
+        // Stream reasoning tokens (think_l2) but suppress content — we'll emit reasoning text after
         const queue = this.event.msgQueue as unknown as { put: (msg: unknown) => Promise<void> };
         return await this.broker.llm.callLlmStream(prompt, queue, { jsonMode: 'json_fence' });
       }
@@ -83,18 +90,26 @@ export class ReactPlanFlow extends BaseFlow {
 
   private async routeResult(parsed: Record<string, unknown>, chain: unknown[]): Promise<void> {
     const tpl = getReactTemplateProvider();
-    const thought = parsed['reasoning'] as string | undefined;
-    const toolCalls = parsed['tool_calls'] as Array<Record<string, unknown>> | undefined;
+    const thought = (parsed['thought'] as string) ?? (parsed['reasoning'] as string) ?? undefined;
     const finalAnswer = parsed['final_answer'] as string | undefined;
     const clarification = parsed['clarification'] as string | undefined;
 
+    // Extract action — support both "action" (single) and "tool_calls" (array) formats
+    let action = parsed['action'] as string | undefined;
+    let actionInput = (parsed['action_input'] as Record<string, unknown>) ?? {};
+    if (!action) {
+      const toolCalls = parsed['tool_calls'] as Array<Record<string, unknown>> | undefined;
+      if (toolCalls?.length) {
+        const call = toolCalls[0]!;
+        action = (call['tool'] as string) ?? (call['action'] as string);
+        actionInput = (call['parameters'] as Record<string, unknown>) ?? (call['action_input'] as Record<string, unknown>) ?? {};
+      }
+    }
+
     if (thought) chain.push({ type: 'thought', thought });
 
-    if (toolCalls?.length && !finalAnswer) {
-      const call = toolCalls[0]!;
-      const action = call['tool'] as string;
-      const input = (call['parameters'] as Record<string, unknown>) ?? {};
-      chain.push({ type: 'action', action, action_input: input });
+    if (action && !finalAnswer) {
+      chain.push({ type: 'action', action, action_input: actionInput });
 
       const toolClass = this.dispatcher.toolsMap.get(action) as { toolTag?: { labelName: string } } | undefined;
       await this.event.propagateMsg(

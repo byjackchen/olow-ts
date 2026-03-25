@@ -20,11 +20,17 @@ class GuestWifiTool extends BaseTool {
   static readonly toolTag: ToolTag = {
     name: MAIN_KEY,
     labelName: 'Guest WiFi',
-    isSpecialized: false,
+    isSpecialized: true,
     mcpExposable: false,
     actionchainMainKey: MAIN_KEY,
-    description: 'Use this tool to provide Guest Wifi access (username and password) regardless of locations or device types. Choose this tool over others whenever queries include keywords guest wifi or wifi password.',
+    description: 'Provide Guest Wifi access (username and password) for any office location.',
     parameters: {},
+    intentHints: [
+      'guest wifi', 'guest wifi password', 'wifi password', 'wifi guest password',
+      'office guest wifi', 'Palo Alto wifi', 'Playa Vista wifi', 'Singapore wifi',
+      '访客网络', '访客网络密码', '办公室访客网络', 'Guest Wifi密码',
+      '新加坡Guest Wifi', '网络密码', '无线网络', '如何连接 Guest Wifi',
+    ],
   };
 
   static async run(): Promise<ToolResult> {

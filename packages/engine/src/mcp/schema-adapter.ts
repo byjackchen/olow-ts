@@ -7,9 +7,14 @@ export function toolTagToMcpSchema(tag: ToolTag): Record<string, unknown> {
   const properties: Record<string, unknown> = {};
   const required: string[] = [];
 
+  const typeMap: Record<string, string> = {
+    [ToolArgumentType.INT]: 'integer',
+    [ToolArgumentType.LIST]: 'array',
+  };
+
   for (const [name, param] of Object.entries(tag.parameters)) {
     properties[name] = {
-      type: param.type === 'integer' ? 'integer' : 'string',
+      type: typeMap[param.type] ?? 'string',
       description: param.description,
     };
     if (param.required) required.push(name);

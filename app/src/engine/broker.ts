@@ -338,42 +338,120 @@ export class Broker implements IBroker {
       model?: string;
     },
   ): Promise<[success: boolean, result: string | Record<string, unknown> | null]> {
+    const { StructuralStreamParser, Section } = await import('@olow/engine');
+
     const provider = opts?.provider ?? config.engine.base_llm_provider;
     const model = opts?.model ?? config.engine.base_llm_model;
     const jsonMode = opts?.jsonMode ?? 'string';
 
     const fullTokens: string[] = [];
+    const parser = new StructuralStreamParser();
+    let lastEmitted: string | null = null;
 
-    if (provider === 'openai') {
-      const stream = openaiApi.streamChatCompletions(message, { model });
+    const emit = async (msgType: string, delta: string, isComplete: boolean) => {
+      if (!isComplete && lastEmitted && lastEmitted !== msgType) {
+        await msgQueue.put({ messageType: lastEmitted, delta: '', isComplete: true });
+      }
+      lastEmitted = isComplete ? null : msgType;
+      await msgQueue.put({ messageType: msgType, delta, isComplete });
+    };
 
-      for await (const [type, token] of stream) {
-        if (type === 'done') break;
+    // Reasoning field extractor — detects "reasoning": " in streaming JSON
+    // and emits only the value content as think_l3 deltas
+    let contentBuf = '';
+    const REASONING_START = '"thought":';
+    let inReasoning = false;
+    let reasoningQuoteDepth = 0; // track escaped quotes
 
-        if (type === 'content') {
-          fullTokens.push(token);
-          await msgQueue.put({
-            messageType: 'answer',
-            delta: token,
-            isComplete: false,
-          });
-        } else if (type === 'reasoning') {
-          await msgQueue.put({
-            messageType: 'think_l2',
-            delta: token,
-            isComplete: false,
-          });
+    const flushContentToken = async (token: string) => {
+      contentBuf += token;
+
+      if (!inReasoning) {
+        // Look for "reasoning": in the buffer
+        const idx = contentBuf.indexOf(REASONING_START);
+        if (idx === -1) return;
+
+        // Found start — skip to the opening quote of the value
+        let rest = contentBuf.slice(idx + REASONING_START.length).trimStart();
+        if (!rest.startsWith('"')) {
+          // Haven't received the opening quote yet, keep buffering
+          return;
         }
+        rest = rest.slice(1); // skip opening "
+        inReasoning = true;
+        contentBuf = rest;
       }
 
-      // Signal completion
-      await msgQueue.put({
-        messageType: 'answer',
-        delta: '',
-        isComplete: true,
-      });
+      if (inReasoning) {
+        // Stream content until unescaped closing "
+        let i = 0;
+        while (i < contentBuf.length) {
+          if (contentBuf[i] === '\\' && i + 1 < contentBuf.length) {
+            // Escaped char — emit the actual char
+            const escaped = contentBuf[i + 1];
+            const actual = escaped === 'n' ? '\n' : escaped === 't' ? '\t' : (escaped ?? '');
+            await emit('think_l3', actual, false);
+            i += 2;
+          } else if (contentBuf[i] === '"') {
+            // End of reasoning value
+            inReasoning = false;
+            await emit('think_l3', '', true);
+            contentBuf = '';
+            return;
+          } else {
+            await emit('think_l3', contentBuf[i]!, false);
+            i++;
+          }
+        }
+        contentBuf = ''; // all consumed
+      }
+    };
+
+    let streamGen: AsyncGenerator<[type: 'reasoning' | 'content' | 'done', token: string]>;
+    if (provider === 'openai') {
+      streamGen = openaiApi.streamChatCompletions(message, { model });
+    } else if (provider === 'hyaide') {
+      const token = this.getRotatedToken();
+      const { streamHyaideLlm } = await import('../services/hyaide.api.js');
+      streamGen = streamHyaideLlm(token, message, model);
     } else {
       throw new Error(`Streaming not implemented for provider: ${provider}`);
+    }
+
+    for await (const [type, token] of streamGen) {
+      if (type === 'done') {
+        if (lastEmitted) {
+          await emit(lastEmitted, '', true);
+        }
+        break;
+      }
+
+      if (type === 'reasoning') {
+        // DeepSeek thinking tokens → think_l2
+        await emit('think_l2', token, false);
+        continue;
+      }
+
+      if (type === 'content') {
+        fullTokens.push(token);
+
+        // Also run through structural parser for <think> tags
+        const results = parser.feed(token);
+        let hasStructural = false;
+        for (const [section, text] of results) {
+          if (section === Section.THINK_L3) {
+            hasStructural = true;
+            await emit('think_l3', text, false);
+          } else if (section === Section.ANSWER) {
+            // For answer section: extract reasoning field, suppress the rest
+            await flushContentToken(text);
+          }
+          // ACTION/RAW sections: silently suppressed
+        }
+        if (!hasStructural && results.length === 0) {
+          await flushContentToken(token);
+        }
+      }
     }
 
     const fullText = fullTokens.join('');

@@ -20,6 +20,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 setReactAgentConfig({
   intent_mode: config.engine.react_agent.intent_mode,
   max_rounds: config.engine.react_agent.max_rounds,
+  specialized_score_threshold: config.engine.react_agent.retrieval_threshold,
 });
 
 // ─── Bootstrap ───

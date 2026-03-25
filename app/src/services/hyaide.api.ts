@@ -17,8 +17,9 @@ export async function callHyaideLlm(
 ): Promise<HyaideLlmResponse> {
   const modelConfig = (config.hyaide as Record<string, unknown>)[model] as { name: string; max_tokens: number } | undefined;
   const modelName = modelConfig?.name ?? model;
+  const llmUrl = `${config.hyaide.llm_url || config.hyaide.url}/openapi/chat/completions`;
 
-  const resp = await fetch(config.hyaide.url, {
+  const resp = await fetch(llmUrl, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -46,16 +47,18 @@ export async function* streamHyaideLlm(
 ): AsyncGenerator<[type: 'reasoning' | 'content' | 'done', token: string]> {
   const modelConfig = (config.hyaide as Record<string, unknown>)[model] as { name: string; max_tokens: number } | undefined;
   const modelName = modelConfig?.name ?? model;
+  const llmUrl = `${config.hyaide.llm_url || config.hyaide.url}/openapi/chat/completions`;
 
-  const resp = await fetch(config.hyaide.url, {
+  const resp = await fetch(llmUrl, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiToken}`,
+      Authorization: apiToken,
     },
     body: JSON.stringify({
       model: modelName,
       messages: [{ role: 'user', content: userMsg }],
+      max_tokens: modelConfig?.max_tokens ?? 32000,
       stream: true,
     }),
   });
@@ -110,21 +113,56 @@ export async function* streamHyaideLlm(
   yield ['done', ''];
 }
 
+// ─── Embedding Search ───
+
+export interface EmbeddingSearchResult {
+  index: string;
+  value: string;
+  metric: number;
+  confidence: string;
+  url?: string;
+}
+
+export async function embeddingSearch(apiToken: string, query: string, agentId: string): Promise<EmbeddingSearchResult[]> {
+  const resp = await callAgentConcise(apiToken, query, agentId);
+  const indexResults = resp.global_output['index_results'] as unknown[] | undefined;
+  if (!indexResults) {
+    throw new Error('Hyaide embedding search: missing index_results in response');
+  }
+  const results = indexResults[0];
+  if (!Array.isArray(results)) return [];
+
+  return (results as Array<Record<string, unknown>>).map((r) => ({
+    index: (r['index'] as string) ?? '',
+    value: (r['value'] as string) ?? '',
+    metric: Number(r['metric'] ?? 0),
+    confidence: String(Math.round((1 - Math.abs(Number(r['metric'] ?? 0))) * 10000) / 10000),
+    url: r['url'] as string | undefined,
+  }));
+}
+
+// ─── Agent Concise ───
+
 export async function callAgentConcise(
   apiToken: string,
   query: string,
   agentId: string,
 ): Promise<{ global_output: Record<string, unknown> }> {
-  const resp = await fetch(config.hyaide.url, {
+  const url = config.hyaide.url;
+  const resp = await fetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiToken}`,
+      Authorization: apiToken,
     },
     body: JSON.stringify({
-      agent_id: agentId,
       query,
-      stream: false,
+      messages: [
+        { role: 'system', content: '' },
+        { role: 'user', content: query },
+      ],
+      forward_service: agentId,
+      query_id: `qid-${Date.now()}`,
     }),
   });
 

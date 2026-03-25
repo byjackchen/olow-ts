@@ -46,10 +46,6 @@ export class ReactActFlow extends BaseFlow {
       return EventStatus.COMPLETE;
     }
 
-    await this.event.propagateMsg(
-      tpl.idle(tpl.i18n.ACT()), undefined, undefined, FlowMsgType.THINK_L2,
-    );
-
     let observation: ToolResult;
     try {
       observation = await ToolClass.run(this.dispatcher, this.event, ...Object.values(verifiedArgs));

@@ -2,13 +2,20 @@ import { z } from 'zod';
 
 // ─── MCP Client Server Config ───
 
+export const mcpToolOverrideSchema = z.object({
+  isSpecialized: z.boolean().optional(),
+  intentHints: z.array(z.string()).optional(),
+});
+export type McpToolOverride = z.infer<typeof mcpToolOverrideSchema>;
+
 export const mcpServerConfigSchema = z.object({
   name: z.string(),
-  transport: z.enum(['stdio', 'sse']).default('stdio'),
+  transport: z.enum(['stdio', 'sse', 'streamable-http']).default('stdio'),
   command: z.string().optional(),
   args: z.array(z.string()).optional(),
   url: z.string().optional(),
   env: z.record(z.string()).optional(),
+  toolOverrides: z.record(mcpToolOverrideSchema).optional(),
 });
 export type McpServerConfig = z.infer<typeof mcpServerConfigSchema>;
 

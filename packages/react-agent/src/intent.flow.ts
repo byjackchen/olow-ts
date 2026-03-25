@@ -1,8 +1,8 @@
 import {
   BaseFlow, Event, flowRegistry, getLogger,
-  CoreEventType, EventStatus, FlowMsgType,
+  CoreEventType, EventStatus, FlowMsgType, matchTools,
 } from '@olow/engine';
-import type { MessengerType } from '@olow/engine';
+import type { MessengerType, ToolTag } from '@olow/engine';
 import { ReactEventType } from './events.js';
 import { getReactAgentConfig } from './config.js';
 import { getReactTemplateProvider } from './templates.js';
@@ -38,7 +38,7 @@ export class ReactIntentFlow extends BaseFlow {
       this.handleMultiTurns(content, chatHistory);
     }
 
-    this.buildAvailableTools();
+    this.buildAvailableTools(content);
     this.dispatcher.eventchain.push(new Event(ReactEventType.REACT_PRECALL));
     return EventStatus.COMPLETE;
   }
@@ -65,13 +65,18 @@ export class ReactIntentFlow extends BaseFlow {
 
     try {
       const [success, result] = await this.broker.llm.callLlm(
-        reactIntentPrompt(content, chatHistory || undefined),
+        reactIntentPrompt(
+          chatHistory
+            ? [...chatHistory.split('\n').map((h) => ({ role: 'user', content: h })), { role: 'user', content: content }]
+            : [{ role: 'user', content: content }],
+          this.request.language ?? 'en',
+        ),
         { jsonMode: 'json_fence' },
       );
 
       if (success && result && typeof result === 'object') {
         const parsed = result as Record<string, unknown>;
-        const rewritten = (parsed['rewritten_question'] as string) ?? content;
+        const rewritten = (parsed['rewritten_query'] as string) ?? (parsed['rewritten_question'] as string) ?? content;
         chain.push({ type: 'question', question: rewritten, original: content });
 
         if (parsed['is_relevant'] === false) {
@@ -95,14 +100,31 @@ export class ReactIntentFlow extends BaseFlow {
     chain.push({ type: 'question', question: content });
   }
 
-  private buildAvailableTools(): void {
-    const tools: Record<string, unknown>[] = [];
+  private buildAvailableTools(query: string): void {
+    const cfg = getReactAgentConfig();
+    const toEntry = (tag: ToolTag) => ({
+      name: tag.name, description: tag.description, parameters: tag.parameters,
+    });
+    const general: Array<{ name: string; description: string; parameters?: Record<string, unknown> }> = [];
+    const specialized: Array<{ toolTag: ToolTag }> = [];
+
     for (const [, tool] of this.dispatcher.toolsMap) {
-      const t = tool as { toolTag?: { name: string; description: string; isSpecialized: boolean } };
-      if (t.toolTag && !t.toolTag.isSpecialized) {
-        tools.push({ name: t.toolTag.name, description: t.toolTag.description });
+      const t = tool as { toolTag?: ToolTag };
+      if (!t.toolTag) continue;
+      if (t.toolTag.isSpecialized) {
+        specialized.push({ toolTag: t.toolTag });
+      } else {
+        general.push(toEntry(t.toolTag));
       }
     }
-    this.dispatcher.states.react.available_tools = tools;
+
+    // BM25 match specialized tools against query
+    const matched = matchTools(query, specialized, cfg.specialized_score_threshold);
+    for (const m of matched) {
+      const tag = specialized.find((s) => s.toolTag.name === m.name)!.toolTag;
+      general.push(toEntry(tag));
+    }
+
+    this.dispatcher.states.react.available_tools = general;
   }
 }

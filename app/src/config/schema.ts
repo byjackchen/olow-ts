@@ -57,7 +57,7 @@ export const configSchema = z.object({
     enabled: coerceBool.default(false),
     servers: z.array(z.object({
       name: z.string(),
-      transport: z.enum(['stdio', 'sse']).default('stdio'),
+      transport: z.enum(['stdio', 'sse', 'streamable-http']).default('stdio'),
       command: z.string().optional(),
       args: z.array(z.string()).optional(),
       url: z.string().optional(),
@@ -128,21 +128,12 @@ export const configSchema = z.object({
 
   hyaide: z.object({
     url: z.string().default(''),
+    llm_url: z.string().default(''),
     token: z.string().default(''),
     admin_user_token: z.string().default(''),
     wsid: z.string().default(''),
-    polaris: z.object({
-      enabled: coerceBool.default(false),
-      namespace: z.string().default(''),
-      service: z.string().default(''),
-      fallback_url: z.string().default(''),
-    }),
     faq_agent_id: z.string().default(''),
-    faq_index_id: z.string().default(''),
-    intent_agent_id: z.string().default(''),
-    intent_index_id: z.string().default(''),
     article_agent_id: z.string().default(''),
-    article_index_id: z.string().default(''),
     llm_tokens: z.array(z.string()).default([]),
     llmDeepseekV32_32k: llmModelSchema.optional(),
     llmDeepseekV3_16k: llmModelSchema.optional(),

@@ -14,6 +14,7 @@ export interface ToolTag {
   actionchainMainKey: string | null;
   description: string;
   parameters: Record<string, ToolParameter>;
+  intentHints?: string[];
 }
 
 export interface ToolResult {

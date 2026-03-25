@@ -99,21 +99,16 @@ slack:
 # ─── Hyaide ───
 hyaide:
   url: ${HYAIDE_URL}
+  llm_url: ${HYAIDE_LLM_URL:-http://api.taiji.woa.com}
   token: ${HYAIDE_TOKEN}
   admin_user_token: ${HYAIDE_ADMIN_TOKEN}
   wsid: ${HYAIDE_WSID}
-  polaris:
-    enabled: false
-    namespace: ${HYAIDE_POLARIS_NAMESPACE}
-    service: ${HYAIDE_POLARIS_SERVICE}
-    fallback_url: ${HYAIDE_POLARIS_FALLBACK_URL}
   faq_agent_id: ${HYAIDE_FAQ_AGENT_ID}
-  faq_index_id: ${HYAIDE_FAQ_INDEX_ID}
-  intent_agent_id: ${HYAIDE_INTENT_AGENT_ID}
-  intent_index_id: ${HYAIDE_INTENT_INDEX_ID}
   article_agent_id: ${HYAIDE_ARTICLE_AGENT_ID}
-  article_index_id: ${HYAIDE_ARTICLE_INDEX_ID}
-  llm_tokens: []
+  llm_tokens:
+    - "ba62f7e6-3e6a-446e-b9cd-750b73f85108"
+    - "3cc2a466-abcb-42b4-bcda-c3acfae2cbe1"
+    - "cb7fb54b-cc28-450f-b8b5-7a6883f93fc3"
   llmDeepseekV32_32k:
     name: "DeepSeek-V3_2-Online-32k"
     max_tokens: 32000

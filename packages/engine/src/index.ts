@@ -66,6 +66,9 @@ export { createLogger, setLogger, getLogger, type LoggerConfig } from './logger.
 // User
 export { User } from './user.js';
 
+// Tool Matcher
+export { matchTools } from './tool-matcher.js';
+
 // Kits (utilities)
 export * as promptKit from './prompt.kit.js';
 export { StructuralStreamParser, Section } from './stream-parser.js';

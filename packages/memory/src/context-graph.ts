@@ -1,7 +1,6 @@
 import { z } from 'zod';
 
 // Lightweight graph-based context memory
-// Uses plain objects instead of graphology for simplicity until Phase 4 adds the full graph
 
 export const ContextNodeSchema = z.object({
   id: z.string(),

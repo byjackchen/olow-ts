@@ -1,13 +1,13 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';
+import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { BaseTool, type ToolTag, type ToolResult } from '../base-tool.js';
 import { mcpSchemaToToolParameters } from './schema-adapter.js';
-import type { McpServerConfig } from '../config.js';
+import type { McpServerConfig, McpToolOverride } from '../config.js';
 import { getLogger } from '../logger.js';
-const logger = getLogger();
 
-// ─── McpToolProxy ───
+const logger = getLogger();
 
 export class McpToolProxy {
   private clients = new Map<string, Client>();
@@ -17,44 +17,19 @@ export class McpToolProxy {
 
     for (const serverConfig of serverConfigs) {
       try {
-        const client = new Client(
-          { name: 'olow-engine', version: '1.0.0' },
-          { capabilities: {} },
-        );
+        const transport = this.createTransport(serverConfig);
+        if (!transport) continue;
 
-        let transport;
-        if (serverConfig.transport === 'stdio') {
-          if (!serverConfig.command) {
-            logger.warn(`MCP server "${serverConfig.name}": stdio transport requires 'command'`);
-            continue;
-          }
-          transport = new StdioClientTransport({
-            command: serverConfig.command,
-            args: serverConfig.args,
-            env: serverConfig.env as Record<string, string> | undefined,
-          });
-        } else if (serverConfig.transport === 'sse') {
-          if (!serverConfig.url) {
-            logger.warn(`MCP server "${serverConfig.name}": sse transport requires 'url'`);
-            continue;
-          }
-          transport = new SSEClientTransport(new URL(serverConfig.url));
-        } else {
-          logger.warn(`MCP server "${serverConfig.name}": unknown transport "${serverConfig.transport}"`);
-          continue;
-        }
-
+        const client = new Client({ name: 'olow-engine', version: '1.0.0' });
         await client.connect(transport);
         this.clients.set(serverConfig.name, client);
         logger.info(`Connected to MCP server: ${serverConfig.name}`);
 
-        // List tools from server
         const { tools } = await client.listTools();
-
         for (const mcpTool of tools) {
-          const toolClass = this.createSyntheticToolClass(serverConfig.name, mcpTool, client);
           const toolName = `mcp_${serverConfig.name}_${mcpTool.name}`;
-          syntheticTools.set(toolName, toolClass);
+          const override = serverConfig.toolOverrides?.[mcpTool.name];
+          syntheticTools.set(toolName, this.createToolClass(toolName, mcpTool, client, override));
           logger.info(`Registered MCP tool: ${toolName}`);
         }
       } catch (err) {
@@ -65,48 +40,56 @@ export class McpToolProxy {
     return syntheticTools;
   }
 
-  private createSyntheticToolClass(
-    serverName: string,
+  private createTransport(cfg: McpServerConfig): InstanceType<typeof StdioClientTransport> | InstanceType<typeof SSEClientTransport> | InstanceType<typeof StreamableHTTPClientTransport> | null {
+    switch (cfg.transport) {
+      case 'stdio':
+        if (!cfg.command) { logger.warn(`MCP server "${cfg.name}": stdio requires 'command'`); return null; }
+        return new StdioClientTransport({ command: cfg.command, args: cfg.args, env: cfg.env as Record<string, string> | undefined });
+      case 'sse':
+        if (!cfg.url) { logger.warn(`MCP server "${cfg.name}": sse requires 'url'`); return null; }
+        return new SSEClientTransport(new URL(cfg.url));
+      case 'streamable-http':
+        if (!cfg.url) { logger.warn(`MCP server "${cfg.name}": streamable-http requires 'url'`); return null; }
+        return new StreamableHTTPClientTransport(new URL(cfg.url));
+      default:
+        logger.warn(`MCP server "${cfg.name}": unknown transport "${cfg.transport}"`);
+        return null;
+    }
+  }
+
+  private createToolClass(
+    toolName: string,
     mcpTool: { name: string; description?: string; inputSchema?: Record<string, unknown> },
     client: Client,
+    override?: McpToolOverride,
   ): typeof BaseTool {
     const parameters = mcpSchemaToToolParameters(mcpTool.inputSchema);
-    const toolName = `mcp_${serverName}_${mcpTool.name}`;
     const mcpToolName = mcpTool.name;
 
     const tag: ToolTag = {
       name: toolName,
       labelName: mcpTool.name,
-      isSpecialized: false,
+      isSpecialized: override?.isSpecialized ?? false,
       mcpExposable: false,
       actionchainMainKey: null,
       description: mcpTool.description ?? '',
       parameters,
+      ...(override?.intentHints ? { intentHints: override.intentHints } : {}),
     };
 
-    // Create a dynamic class that extends BaseTool
     const toolClass = class McpProxyTool extends BaseTool {
       static readonly toolTag: ToolTag = tag;
 
-      static async run(
-        _dispatcher: unknown,
-        _event: unknown,
-        ...args: unknown[]
-      ): Promise<ToolResult> {
+      static async run(_dispatcher: unknown, _event: unknown, ...args: unknown[]): Promise<ToolResult> {
         try {
-          // Map positional args to named params based on toolTag.parameters
           const namedArgs: Record<string, unknown> = {};
           const paramNames = Object.keys(parameters);
           for (let i = 0; i < paramNames.length; i++) {
             if (args[i] !== undefined) namedArgs[paramNames[i]!] = args[i];
           }
 
-          const result = await client.callTool({
-            name: mcpToolName,
-            arguments: namedArgs,
-          });
+          const result = await client.callTool({ name: mcpToolName, arguments: namedArgs });
 
-          // Extract text content from MCP result
           let data: unknown;
           if (Array.isArray(result.content)) {
             const textParts = result.content
@@ -117,21 +100,13 @@ export class McpToolProxy {
             data = result.content;
           }
 
-          return {
-            success: !result.isError,
-            data,
-            error: result.isError ? String(data) : undefined,
-          };
+          return { success: !result.isError, data, error: result.isError ? String(data) : undefined };
         } catch (err) {
-          return {
-            success: false,
-            error: `MCP tool call failed: ${String(err)}`,
-          };
+          return { success: false, error: `MCP tool call failed: ${String(err)}` };
         }
       }
     };
 
-    // Set a descriptive class name
     Object.defineProperty(toolClass, 'name', { value: `McpTool_${mcpTool.name}` });
     return toolClass;
   }
