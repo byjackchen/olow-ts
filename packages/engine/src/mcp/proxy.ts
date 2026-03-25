@@ -4,7 +4,8 @@ import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';
 import { BaseTool, type ToolTag, type ToolResult } from '../base-tool.js';
 import { mcpSchemaToToolParameters } from './schema-adapter.js';
 import type { McpServerConfig } from '../config.js';
-import logger from '../logger.js';
+import { getLogger } from '../logger.js';
+const logger = getLogger();
 
 // ─── McpToolProxy ───
 

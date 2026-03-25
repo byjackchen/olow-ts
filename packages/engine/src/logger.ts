@@ -3,7 +3,9 @@ import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { getContext } from './context.js';
 
-// ─── Logger Config ───
+export type { Logger } from 'pino';
+
+// ─── Config ───
 
 export interface LoggerConfig {
   app_log_path: string;
@@ -44,7 +46,7 @@ export function createLogger(opts: LoggerConfig): Logger {
   });
 }
 
-// ─── Global Logger Singleton (set once at startup) ───
+// ─── Singleton ───
 
 let _logger: Logger | null = null;
 
@@ -54,18 +56,7 @@ export function setLogger(l: Logger): void {
 
 export function getLogger(): Logger {
   if (!_logger) {
-    // Fallback: create a minimal console logger if not yet initialized
     _logger = pino({ level: 'info' });
   }
   return _logger;
 }
-
-// Default export for backward compatibility — all engine files import `logger` from here
-const logger: Logger = new Proxy({} as Logger, {
-  get(_target, prop, receiver) {
-    return Reflect.get(getLogger(), prop, receiver);
-  },
-});
-
-export { logger };
-export default logger;

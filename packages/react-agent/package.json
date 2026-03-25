@@ -14,7 +14,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@olow/engine": "*"
+    "@olow/engine": "*",
+    "@olow/templates": "*"
   },
   "devDependencies": {
     "typescript": "^5.8.3",

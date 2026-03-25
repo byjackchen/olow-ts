@@ -2,7 +2,8 @@ import { readdir } from 'node:fs/promises';
 import { join, extname, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { SpaceType } from './types.js';
-import logger from './logger.js';
+import { getLogger } from './logger.js';
+const logger = getLogger();
 
 // ─── Space Config ───
 

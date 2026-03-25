@@ -1,4 +1,5 @@
 import type { ITemplate, Language } from '@olow/engine';
+import { AiIdleTemplate, AiReActAnswerTemplate, TextTemplate, I18n, type Recommendation } from '@olow/templates';
 
 export interface IReactTemplateProvider {
   idle(text: string): ITemplate;
@@ -12,15 +13,25 @@ export interface IReactTemplateProvider {
   };
 }
 
-let _provider: IReactTemplateProvider | null = null;
+// Default provider using @olow/templates
+const DEFAULT_PROVIDER: IReactTemplateProvider = {
+  idle: (text) => new AiIdleTemplate([text]),
+  text: (lines) => new TextTemplate(lines),
+  answer: (opts) => new AiReActAnswerTemplate({ ...opts, recommendations: opts.recommendations as Recommendation[] }),
+  i18n: {
+    INTENT: I18n.AI_INTENT,
+    PLAN: I18n.AI_REACT_PLAN,
+    ACT: I18n.AI_REACT_ACT,
+    NO_ANSWER: I18n.NO_ANSWER_FALLBACK,
+  },
+};
+
+let _provider: IReactTemplateProvider = DEFAULT_PROVIDER;
 
 export function setReactTemplateProvider(provider: IReactTemplateProvider): void {
   _provider = provider;
 }
 
 export function getReactTemplateProvider(): IReactTemplateProvider {
-  if (!_provider) {
-    throw new Error('@olow/react-agent: template provider not set. Call setReactTemplateProvider() at startup.');
-  }
   return _provider;
 }

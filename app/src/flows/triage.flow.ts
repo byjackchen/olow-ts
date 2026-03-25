@@ -5,8 +5,7 @@ import {
 } from '@olow/engine';
 import type { MessengerType, MemoryActionChain } from '@olow/engine';
 const logger = getLogger();
-import { TextTemplate, AgentSupportConfirmTemplate } from '../templates/text.template.js';
-import { I18n } from '../templates/i18n.js';
+import { TextTemplate, AgentSupportConfirmTemplate, I18n } from '@olow/templates';
 import { config } from '../config/index.js';
 
 // ─── Similarity Words ───

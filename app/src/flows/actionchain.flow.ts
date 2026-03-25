@@ -6,8 +6,7 @@ import {
 } from '@olow/engine';
 import type { MessengerType, MemoryActionChain } from '@olow/engine';
 const logger = getLogger();
-import { TextTemplate } from '../templates/text.template.js';
-import { I18n } from '../templates/i18n.js';
+import { TextTemplate, I18n } from '@olow/templates';
 
 @flowRegistry.register()
 export class ActionChainFlow extends BaseFlow {

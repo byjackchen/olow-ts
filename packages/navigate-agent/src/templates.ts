@@ -1,4 +1,5 @@
 import type { ITemplate, Language } from '@olow/engine';
+import { TextTemplate, I18n } from '@olow/templates';
 
 export interface INavigateTemplateProvider {
   text(lines: string[]): ITemplate;
@@ -7,15 +8,20 @@ export interface INavigateTemplateProvider {
   };
 }
 
-let _provider: INavigateTemplateProvider | null = null;
+// Default provider using @olow/templates
+const DEFAULT_PROVIDER: INavigateTemplateProvider = {
+  text: (lines) => new TextTemplate(lines),
+  i18n: {
+    NAVIGATE_OPTIONS: I18n.GREETING,
+  },
+};
+
+let _provider: INavigateTemplateProvider = DEFAULT_PROVIDER;
 
 export function setNavigateTemplateProvider(provider: INavigateTemplateProvider): void {
   _provider = provider;
 }
 
 export function getNavigateTemplateProvider(): INavigateTemplateProvider {
-  if (!_provider) {
-    throw new Error('@olow/navigate-agent: template provider not set. Call setNavigateTemplateProvider() at startup.');
-  }
   return _provider;
 }

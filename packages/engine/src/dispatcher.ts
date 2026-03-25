@@ -1,5 +1,6 @@
 import { randomBytes } from 'node:crypto';
-import logger from './logger.js';
+import { getLogger } from './logger.js';
+const logger = getLogger();
 import { requestContext, type RequestContext } from './context.js';
 import {
   type EventStatus,

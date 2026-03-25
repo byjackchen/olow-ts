@@ -2,7 +2,8 @@ import { RequesterType as RT } from './types.js';
 import { Memory } from './memory/index.js';
 import type { IBroker } from './broker-interfaces.js';
 import type { IUser } from './events.js';
-import logger from './logger.js';
+import { getLogger } from './logger.js';
+const logger = getLogger();
 
 // ─── User ───
 

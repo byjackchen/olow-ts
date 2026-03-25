@@ -4,7 +4,7 @@ import {
 } from '@olow/engine';
 import type { Event, MessengerType } from '@olow/engine';
 const logger = getLogger();
-import { TextTemplate } from '../templates/text.template.js';
+import { TextTemplate } from '@olow/templates';
 
 @flowRegistry.register()
 export class SnTicketFlow extends BaseFlow {

@@ -17,35 +17,13 @@ import * as mongo from './storage/mongo.js';
 import { Dispatcher, setDispatcherConfig } from '@olow/engine';
 import { flowRegistry, toolRegistry, actionchainRegistry, setSpace } from '@olow/engine';
 import { ResponseMode, MessengerType, RequesterType, SystemName } from '@olow/engine';
-import { setReactTemplateProvider, setReactAgentConfig } from '@olow/react-agent';
-import { setNavigateTemplateProvider } from '@olow/navigate-agent';
-import { AiIdleTemplate, AiReActAnswerTemplate, type Recommendation } from './templates/ai.template.js';
-import { TextTemplate } from './templates/text.template.js';
-import { I18n } from './templates/i18n.js';
+import { setReactAgentConfig } from '@olow/react-agent';
+import '@olow/navigate-agent';
 
-// Wire react agent
+// Wire react agent config (templates use @olow/templates defaults)
 setReactAgentConfig({
   intent_mode: config.engine.react_agent.intent_mode,
   max_rounds: config.engine.react_agent.max_rounds,
-});
-setReactTemplateProvider({
-  idle: (text) => new AiIdleTemplate([text]),
-  text: (lines) => new TextTemplate(lines),
-  answer: (opts) => new AiReActAnswerTemplate({ ...opts, recommendations: opts.recommendations as Recommendation[] }),
-  i18n: {
-    INTENT: I18n.AI_INTENT,
-    PLAN: I18n.AI_REACT_PLAN,
-    ACT: I18n.AI_REACT_ACT,
-    NO_ANSWER: I18n.NO_ANSWER_FALLBACK,
-  },
-});
-
-// Wire navigate agent
-setNavigateTemplateProvider({
-  text: (lines) => new TextTemplate(lines),
-  i18n: {
-    NAVIGATE_OPTIONS: I18n.GREETING, // placeholder — replace with dedicated i18n entry
-  },
 });
 
 const __dirname = dirname(fileURLToPath(import.meta.url));

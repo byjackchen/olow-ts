@@ -1,8 +1,8 @@
 import type { Language } from '@olow/engine';
 
-type I18nEntry = Record<Language, string>;
+export type I18nEntry = Record<Language, string>;
 
-function i18n(entries: I18nEntry): (lang?: Language) => string {
+export function i18n(entries: I18nEntry): (lang?: Language) => string {
   return (lang?: Language) => entries[lang ?? 'en'] ?? entries['en']!;
 }
 
