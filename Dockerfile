@@ -5,6 +5,7 @@ COPY package.json package-lock.json ./
 COPY packages/memory/package.json ./packages/memory/
 COPY packages/engine/package.json ./packages/engine/
 COPY packages/react-agent/package.json ./packages/react-agent/
+COPY packages/templates/package.json ./packages/templates/
 COPY packages/navigate-agent/package.json ./packages/navigate-agent/
 COPY app/package.json ./app/
 RUN npm ci
@@ -26,4 +27,4 @@ RUN mkdir -p /app/logs && chown -R appuser:appuser /app
 USER appuser
 WORKDIR /app/app
 EXPOSE 3001
-CMD ["node", "dist/main.js"]
+CMD ["node", "dist/index.js"]

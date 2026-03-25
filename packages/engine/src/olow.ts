@@ -1,10 +1,10 @@
 import type { IBroker } from './broker-interfaces.js';
-import type { EngineConfig } from './config.js';
+import { engineConfigSchema, type EngineConfig } from './config.js';
 import type { IMessenger } from './messengers.js';
 import type { MessengerType, SpaceType, ResponseMode, RequesterType, SystemName, BotEngineStreamOutput } from './types.js';
 import { Dispatcher, setDispatcherConfig } from './dispatcher.js';
 import { flowRegistry, toolRegistry, actionchainRegistry, setSpace } from './registry.js';
-import { createLogger, setLogger, type LoggerConfig } from './logger.js';
+import { createLogger, setLogger } from './logger.js';
 import { setMemoryConfig, setMemoryStorage } from './memory/index.js';
 import { BaseFlow } from './base-flow.js';
 import { BaseTool } from './base-tool.js';
@@ -40,8 +40,8 @@ export class OlowEngine {
     return this;
   }
 
-  withConfig(config: EngineConfig): this {
-    this._config = config;
+  withConfig(config: Record<string, unknown>): this {
+    this._config = engineConfigSchema.parse(config);
     return this;
   }
 
