@@ -1,4 +1,4 @@
-import type { Broker } from '../broker.js';
+import type { IBroker } from '../broker-interfaces.js';
 import type {
   MessengerType,
   RequesterType,
@@ -44,7 +44,7 @@ export interface IMessenger {
   readonly type: MessengerType;
   readonly supportsStreaming: boolean;
 
-  initRequest(broker: Broker, requesterType: RequesterType, msg: Record<string, unknown>): RequestInitResult;
+  initRequest(broker: IBroker, requesterType: RequesterType, msg: Record<string, unknown>): RequestInitResult;
 
   say(opts: {
     messageType: FlowMsgType;
@@ -91,7 +91,7 @@ class WebBotMessenger implements IMessenger {
   readonly type = MT.WEB_BOT;
   readonly supportsStreaming = true;
 
-  initRequest(broker: Broker, _requesterType: RequesterType, msg: Record<string, unknown>): RequestInitResult {
+  initRequest(broker: IBroker, _requesterType: RequesterType, msg: Record<string, unknown>): RequestInitResult {
     // Web bot uses standard user ID from payload
     const userId = (msg['UserId'] as string) ?? (msg['user_id'] as string) ?? 'unknown';
     const content = msg['content'] as string | undefined;
@@ -151,7 +151,7 @@ class StubMessenger implements IMessenger {
     this.type = type;
   }
 
-  initRequest(_broker: Broker, _requesterType: RequesterType, msg: Record<string, unknown>): RequestInitResult {
+  initRequest(_broker: IBroker, _requesterType: RequesterType, msg: Record<string, unknown>): RequestInitResult {
     const userId = (msg['UserId'] as string) ?? (msg['FromUserName'] as string) ?? 'unknown';
     return {
       requester: { type: 'User', id: userId },

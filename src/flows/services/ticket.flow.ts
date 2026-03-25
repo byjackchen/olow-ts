@@ -1,10 +1,11 @@
 import { BaseFlow } from '../base.flow.js';
 import { EventType, EventStatus, type MessengerType } from '../../engine/types.js';
 import type { Event } from '../../engine/events.js';
-import { registerFlow } from '../../engine/dispatcher.js';
+import { flowRegistry } from '../../engine/registry.js';
 import * as mongo from '../../storage/mongo.js';
 import logger from '../../engine/logger.js';
 
+@flowRegistry.register()
 export class BotServicesTicketFlow extends BaseFlow {
   static canHandle(event: Event, _messengerType?: MessengerType): boolean {
     return event.type === EventType.BOT_SERVICES_TICKET;
@@ -36,4 +37,3 @@ export class BotServicesTicketFlow extends BaseFlow {
     return EventStatus.COMPLETE;
   }
 }
-registerFlow(BotServicesTicketFlow);

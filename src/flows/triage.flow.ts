@@ -10,7 +10,7 @@ import { Event, Request } from '../engine/events.js';
 import { TextTemplate } from '../templates/text.template.js';
 import { AgentSupportConfirmTemplate } from '../templates/text.template.js';
 import { I18n } from '../templates/i18n.js';
-import { registerFlow } from '../engine/dispatcher.js';
+import { flowRegistry } from '../engine/registry.js';
 import { MemoryThreadName, type MemoryActionChain } from '../engine/memory/index.js';
 import { config } from '../config/index.js';
 import logger from '../engine/logger.js';
@@ -63,6 +63,7 @@ function checkSimilarity(text: string): 'greeting' | 'agentsupport' | null {
 
 // ─── Triage Flow ───
 
+@flowRegistry.register()
 export class TriageFlow extends BaseFlow {
   static canHandle(event: Event, _messengerType?: MessengerType): boolean {
     return event.type === EventType.TRIAGE;
@@ -165,7 +166,7 @@ export class TriageFlow extends BaseFlow {
   private async peakShaving(): Promise<boolean> {
     try {
       const threshold = config.engine.rolling_requests_threshold;
-      const count = await this.broker.incrementPeakShaving(60);
+      const count = await this.broker.incrementPeakShaving(60);  // direct IBroker method
       if (count >= threshold) {
         logger.warn(`Peak shaving triggered: ${count} >= ${threshold}`);
         return true;
@@ -176,4 +177,3 @@ export class TriageFlow extends BaseFlow {
     return false;
   }
 }
-registerFlow(TriageFlow);

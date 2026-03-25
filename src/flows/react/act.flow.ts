@@ -4,11 +4,12 @@ import { Event } from '../../engine/events.js';
 import { AiIdleTemplate } from '../../templates/ai.template.js';
 import { TextTemplate } from '../../templates/text.template.js';
 import { I18n } from '../../templates/i18n.js';
-import { registerFlow } from '../../engine/dispatcher.js';
+import { flowRegistry } from '../../engine/registry.js';
 import { ACTION_CHAIN_ROOT_KEY } from '../../engine/types.js';
 import type { BaseTool, ToolResult, ToolTag } from '../../tools/base.tool.js';
 import logger from '../../engine/logger.js';
 
+@flowRegistry.register()
 export class ReactActFlow extends BaseFlow {
   static canHandle(event: Event, _messengerType?: MessengerType): boolean {
     return event.type === EventType.REACT_ACT;
@@ -114,4 +115,3 @@ export class ReactActFlow extends BaseFlow {
     return EventStatus.COMPLETE;
   }
 }
-registerFlow(ReactActFlow);

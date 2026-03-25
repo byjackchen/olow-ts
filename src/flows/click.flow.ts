@@ -3,11 +3,12 @@ import { EventType, EventStatus, type MessengerType, FlowMsgType, ACTION_CHAIN_R
 import { Event } from '../engine/events.js';
 import { TextTemplate } from '../templates/text.template.js';
 import { I18n } from '../templates/i18n.js';
-import { registerFlow } from '../engine/dispatcher.js';
+import { flowRegistry } from '../engine/registry.js';
 import { MemoryThreadName } from '../engine/memory/index.js';
 import * as mongo from '../storage/mongo.js';
 import logger from '../engine/logger.js';
 
+@flowRegistry.register()
 export class ClickFlow extends BaseFlow {
   static canHandle(event: Event, _messengerType?: MessengerType): boolean {
     return event.type === EventType.CLICK;
@@ -118,4 +119,3 @@ export class ClickFlow extends BaseFlow {
     }
   }
 }
-registerFlow(ClickFlow);

@@ -1,9 +1,10 @@
 import { BaseFlow } from '../base.flow.js';
 import { EventType, EventStatus, type MessengerType } from '../../engine/types.js';
 import type { Event } from '../../engine/events.js';
-import { registerFlow } from '../../engine/dispatcher.js';
+import { flowRegistry } from '../../engine/registry.js';
 import logger from '../../engine/logger.js';
 
+@flowRegistry.register()
 export class BotServicesNotificationFlow extends BaseFlow {
   static canHandle(event: Event, _messengerType?: MessengerType): boolean {
     return event.type === EventType.BOT_SERVICES_NOTIFICATION;
@@ -20,7 +21,7 @@ export class BotServicesNotificationFlow extends BaseFlow {
 
     if (targetUser && message) {
       try {
-        await this.broker.sendSingleText(targetUser, message);
+        await this.broker.messaging.sendText(targetUser, message);
         this.dispatcher.states.service_response = { status: 'success', message: 'Notification sent' };
       } catch (err) {
         logger.error({ msg: 'Failed to send notification', err });
@@ -33,4 +34,3 @@ export class BotServicesNotificationFlow extends BaseFlow {
     return EventStatus.COMPLETE;
   }
 }
-registerFlow(BotServicesNotificationFlow);

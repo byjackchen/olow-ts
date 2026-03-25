@@ -3,12 +3,13 @@ import { EventType, EventStatus, ActionType, type MessengerType, FlowMsgType } f
 import { Event } from '../engine/events.js';
 import { TextTemplate } from '../templates/text.template.js';
 import { I18n } from '../templates/i18n.js';
-import { registerFlow } from '../engine/dispatcher.js';
+import { flowRegistry } from '../engine/registry.js';
 import { MemoryThreadName, type MemorySettings } from '../engine/memory/index.js';
 import * as mongo from '../storage/mongo.js';
 import { config } from '../config/index.js';
 import logger from '../engine/logger.js';
 
+@flowRegistry.register()
 export class GreetingFlow extends BaseFlow {
   static canHandle(event: Event, _messengerType?: MessengerType): boolean {
     return event.type === EventType.GREETING;
@@ -65,7 +66,7 @@ export class GreetingFlow extends BaseFlow {
       const adminGroupId = config.engine.admin_chatgroup_id;
       if (!adminGroupId) return;
       const now = new Date().toISOString();
-      await this.broker.sendGroupText(
+      await this.broker.messaging.sendGroupText(
         adminGroupId,
         `[VIP] User ${this.request.requester.id} entered chat at ${now}`,
       );
@@ -83,4 +84,3 @@ export class GreetingFlow extends BaseFlow {
     }
   }
 }
-registerFlow(GreetingFlow);

@@ -1,21 +1,24 @@
 {
   "name": "olow-ts",
   "version": "1.0.0",
-  "description": "Multi-messenger AI chatbot engine",
+  "private": true,
+  "description": "Multi-messenger AI chatbot engine — monorepo",
   "type": "module",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
   "engines": {
     "node": ">=22.0.0"
   },
   "scripts": {
-    "dev": "tsx watch src/main.ts",
-    "build": "tsc",
-    "start": "node dist/main.js",
+    "build": "npm run build --workspaces",
+    "typecheck": "npm run typecheck --workspaces",
+    "dev": "npm run dev --workspace=olow-app",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint src/",
-    "lint:fix": "eslint src/ --fix",
-    "typecheck": "tsc --noEmit",
-    "db:init": "tsx scripts/initialize-mongo.ts"
+    "lint:fix": "eslint src/ --fix"
   },
   "dependencies": {
     "fastify": "^5.3.3",

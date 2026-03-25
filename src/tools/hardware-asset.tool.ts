@@ -2,8 +2,9 @@ import { BaseTool, type ToolTag, type ToolResult } from './base.tool.js';
 import { ToolArgumentType } from '../engine/types.js';
 import logger from '../engine/logger.js';
 import * as servicenowApi from '../services/servicenow.api.js';
-import { registerTool } from '../engine/dispatcher.js';
+import { toolRegistry } from '../engine/registry.js';
 
+@toolRegistry.register({ name: 'get_hardware_asset' })
 export class HardwareAssetTool extends BaseTool {
   static readonly toolTag: ToolTag = {
     name: 'get_hardware_asset',
@@ -42,4 +43,3 @@ export class HardwareAssetTool extends BaseTool {
     }
   }
 }
-registerTool('get_hardware_asset', HardwareAssetTool);

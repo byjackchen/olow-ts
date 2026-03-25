@@ -1,5 +1,4 @@
 import { randomBytes } from 'node:crypto';
-import { config } from '../config/index.js';
 import logger from './logger.js';
 import { requestContext, type RequestContext } from './context.js';
 import {
@@ -36,33 +35,38 @@ import {
   type UniversalResponse,
   type IUser,
 } from './events.js';
-import type { Broker } from './broker.js';
+import type { IBroker } from './broker-interfaces.js';
 import { createMessenger, type IMessenger } from './messengers/index.js';
 import { BaseFlow, type IDispatcher } from '../flows/base.flow.js';
 import type { ITemplate } from '../templates/base.template.js';
-import * as mongo from '../storage/mongo.js';
+import { flowRegistry, toolRegistry, actionchainRegistry } from './registry.js';
+
+// ─── Engine Config for Dispatcher ───
+
+export interface DispatcherEngineConfig {
+  max_event_loops: number;
+  post_msg_verbose: boolean;
+  developers: string[];
+  administrators: string[];
+}
+
+const DEFAULT_DISPATCHER_CONFIG: DispatcherEngineConfig = {
+  max_event_loops: 30,
+  post_msg_verbose: false,
+  developers: [],
+  administrators: [],
+};
+
+let _dispatcherConfig: DispatcherEngineConfig = DEFAULT_DISPATCHER_CONFIG;
+
+export function setDispatcherConfig(cfg: DispatcherEngineConfig): void {
+  _dispatcherConfig = cfg;
+}
 
 // ─── Dispatcher ───
 
-// Static registries — populated at import time by flow/tool/chain modules
-const registeredFlows: Array<typeof BaseFlow> = [];
-const registeredTools = new Map<string, unknown>();
-const registeredActionchains = new Map<string, unknown>();
-
-export function registerFlow(flowClass: typeof BaseFlow): void {
-  registeredFlows.push(flowClass);
-}
-
-export function registerTool(name: string, tool: unknown): void {
-  registeredTools.set(name, tool);
-}
-
-export function registerActionchain(name: string, chain: unknown): void {
-  registeredActionchains.set(name, chain);
-}
-
 export class Dispatcher implements IDispatcher {
-  broker: Broker;
+  broker: IBroker;
   eventchain: EventChain;
   responses: ResponseChain;
   states: FlowStates;
@@ -77,14 +81,14 @@ export class Dispatcher implements IDispatcher {
   request!: Request;
   cycleId: string | null = null;
 
-  constructor(broker: Broker) {
+  constructor(broker: IBroker) {
     this.broker = broker;
     this.eventchain = new EventChain();
     this.responses = new ResponseChain();
     this.states = FlowStatesSchema.parse({});
-    this.flows = [...registeredFlows];
-    this.toolsMap = new Map(registeredTools);
-    this.actionchainsMap = new Map(registeredActionchains);
+    this.flows = [...flowRegistry.getRegistered<typeof BaseFlow>().values()];
+    this.toolsMap = toolRegistry.getRegistered();
+    this.actionchainsMap = actionchainRegistry.getRegistered();
   }
 
   async asyncInitialize(
@@ -134,7 +138,7 @@ export class Dispatcher implements IDispatcher {
   }
 
   async *loopEventChain(): AsyncGenerator<FlowMsg | StreamDeltaFlowMsg> {
-    const maxLoops = config.engine.max_event_loops;
+    const maxLoops = _dispatcherConfig.max_event_loops;
     let currentLoop = 0;
     const runningTasks = new Map<Event, Promise<EventStatus>>();
     const msgQueue = new MessageQueue<FlowMsg | StreamDeltaFlowMsg>();
@@ -244,7 +248,7 @@ export class Dispatcher implements IDispatcher {
   // ─── Static Entry Point ───
 
   static async *asyncMain(opts: {
-    broker: Broker;
+    broker: IBroker;
     responseMode: ResponseMode;
     space: SpaceType;
     messengerType?: MessengerType;
@@ -366,7 +370,7 @@ export class Dispatcher implements IDispatcher {
     const messageType = flowMsg.messageType ?? FMT.ANSWER;
 
     // Check verbose mode
-    if (!config.engine.post_msg_verbose && messageType !== FMT.ANSWER && messageType !== FMT.THINK_L1) {
+    if (!_dispatcherConfig.post_msg_verbose && messageType !== FMT.ANSWER && messageType !== FMT.THINK_L1) {
       logger.info(`Skipped message of type ${messageType} due to non-verbose mode`);
       return;
     }
@@ -423,7 +427,7 @@ export class Dispatcher implements IDispatcher {
 
   async notifyEngineMsg(noticeMsg: string, isWarningSilent = false): Promise<void> {
     const truncated = noticeMsg.slice(0, 2000);
-    const developers = config.engine.developers;
+    const developers = _dispatcherConfig.developers;
 
     if (!isWarningSilent) {
       const content = `[Error] Requester ${this.request?.requester?.id}: ${truncated}`;
@@ -436,7 +440,7 @@ export class Dispatcher implements IDispatcher {
 
     for (const dev of developers) {
       try {
-        await this.broker.sendSingleText(dev, truncated);
+        await this.broker.messaging.sendText(dev, truncated);
       } catch {
         // Best effort
       }
@@ -514,7 +518,7 @@ export class Dispatcher implements IDispatcher {
 
       if (this.states.click_validation !== true) {
         try {
-          const cycleDoc = await mongo.cyclesGetOneById(cycleId);
+          const cycleDoc = await this.broker.cyclesGetOneById(cycleId);
           if (!cycleDoc) {
             this.states.click_validation = true;
             return [false, key, cycleId];
@@ -530,7 +534,7 @@ export class Dispatcher implements IDispatcher {
           }
 
           clicks.push(mainKey);
-          await mongo.cyclesUpdate(cycleId, { clicks });
+          await this.broker.cyclesUpdate(cycleId, { clicks });
           this.states.click_validation = true;
           return [true, key, cycleId];
         } catch (err) {

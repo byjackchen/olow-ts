@@ -3,11 +3,12 @@ import { EventType, EventStatus, type MessengerType, FlowMsgType } from '../../e
 import { Event, Request } from '../../engine/events.js';
 import { AiIdleTemplate } from '../../templates/ai.template.js';
 import { I18n } from '../../templates/i18n.js';
-import { registerFlow } from '../../engine/dispatcher.js';
+import { flowRegistry } from '../../engine/registry.js';
 import { config } from '../../config/index.js';
 import * as promptKit from '../../kits/prompt.kit.js';
 import logger from '../../engine/logger.js';
 
+@flowRegistry.register()
 export class ReactIntentFlow extends BaseFlow {
   static canHandle(event: Event, _messengerType?: MessengerType): boolean {
     return event.type === EventType.REACT_INTENT;
@@ -52,7 +53,7 @@ export class ReactIntentFlow extends BaseFlow {
       }
 
       try {
-        const [success, result] = await this.broker.callLlm(
+        const [success, result] = await this.broker.llm.callLlm(
           promptKit.reactIntentPrompt(content, chatHistory || undefined),
           { jsonMode: 'json_fence' },
         );
@@ -134,4 +135,3 @@ export class ReactIntentFlow extends BaseFlow {
     return EventStatus.COMPLETE;
   }
 }
-registerFlow(ReactIntentFlow);

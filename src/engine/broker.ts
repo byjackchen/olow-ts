@@ -7,10 +7,11 @@ import * as openaiApi from '../services/openai.api.js';
 import { callHyaideLlm } from '../services/hyaide.api.js';
 import { getUserRtx } from '../services/slack.api.js';
 import { type MessengerType, MessengerType as MT, type UserIdType, UserIdType as UIT } from './types.js';
+import type { IBroker, ILlmProvider, IMessagingProvider, CycleCreateParams, CycleUpdateParams } from './broker-interfaces.js';
 
 // ─── Broker ───
 
-export class Broker {
+export class Broker implements IBroker {
   private static instance: Broker | null = null;
 
   readonly redis: Redis;
@@ -61,6 +62,44 @@ export class Broker {
   async shutdown(): Promise<void> {
     this.redis.disconnect();
     await mongo.closeDatabase();
+  }
+
+  // ─── IBroker Sub-Providers ───
+
+  get llm(): ILlmProvider {
+    return {
+      callLlm: (message, opts) => this.callLlm(message, opts),
+      callLlmStream: (message, msgQueue, opts) => this.callLlmStream(message, msgQueue, opts),
+    };
+  }
+
+  get messaging(): IMessagingProvider {
+    return {
+      sendText: (recipient, message) => this.sendSingleText(recipient, message),
+      sendRichText: (recipient, content) => this.sendSingleRichtext(recipient, content),
+      sendGroupText: (groupId, message) => this.sendGroupText(groupId, message),
+      sendFile: (recipient, mediaId) => this.sendSingleFile(recipient, mediaId),
+      sendImage: (recipient, mediaId) => this.sendSingleImage(recipient, mediaId),
+      createChatGroup: (name, userList) => this.createChatGroup(name, userList),
+    };
+  }
+
+  // ─── IBroker Storage Delegates ───
+
+  async getUser(userId: string): Promise<Record<string, unknown> | null> {
+    return mongo.getUser(userId) as Promise<Record<string, unknown> | null>;
+  }
+
+  async upsertUser(userId: string, data: Record<string, unknown>): Promise<void> {
+    return mongo.upsertUser(userId, data);
+  }
+
+  async getSystem(name: string): Promise<Record<string, unknown> | null> {
+    return mongo.getSystem(name) as Promise<Record<string, unknown> | null>;
+  }
+
+  async upsertSystem(name: string, data: Record<string, unknown>): Promise<void> {
+    return mongo.upsertSystem(name, data as { token: string; expiretime: Date });
   }
 
   // ─── Token Management ───
@@ -365,12 +404,16 @@ export class Broker {
 
   // ─── MongoDB Wrappers ───
 
-  async cyclesCreate(...args: Parameters<typeof mongo.cyclesCreate>): Promise<string> {
-    return mongo.cyclesCreate(...args);
+  async cyclesCreate(params: CycleCreateParams): Promise<string> {
+    return mongo.cyclesCreate(params);
   }
 
-  async cyclesUpdate(...args: Parameters<typeof mongo.cyclesUpdate>): Promise<void> {
-    return mongo.cyclesUpdate(...args);
+  async cyclesUpdate(id: string, update: CycleUpdateParams): Promise<void> {
+    return mongo.cyclesUpdate(id, update);
+  }
+
+  async cyclesGetOneById(id: string): Promise<Record<string, unknown> | null> {
+    return mongo.cyclesGetOneById(id) as Promise<Record<string, unknown> | null>;
   }
 
   // ─── Peak Shaving (Redis) ───

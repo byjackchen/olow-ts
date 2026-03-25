@@ -2,8 +2,9 @@ import { BaseTool, type ToolTag, type ToolResult } from './base.tool.js';
 import { ToolArgumentType } from '../engine/types.js';
 import logger from '../engine/logger.js';
 import * as mongo from '../storage/mongo.js';
-import { registerTool } from '../engine/dispatcher.js';
+import { toolRegistry } from '../engine/registry.js';
 
+@toolRegistry.register({ name: 'faq_tool' })
 export class FaqTool extends BaseTool {
   static readonly toolTag: ToolTag = {
     name: 'faq_tool',
@@ -72,4 +73,3 @@ export class FaqTool extends BaseTool {
     }
   }
 }
-registerTool('faq_tool', FaqTool);

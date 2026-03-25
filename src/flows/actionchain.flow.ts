@@ -3,11 +3,12 @@ import { EventType, EventStatus, ActionType, type MessengerType, FlowMsgType, AC
 import { Event } from '../engine/events.js';
 import { TextTemplate } from '../templates/text.template.js';
 import { I18n } from '../templates/i18n.js';
-import { registerFlow } from '../engine/dispatcher.js';
+import { flowRegistry } from '../engine/registry.js';
 import { BaseActionChain, UnexpectedInputException, NoActiveException } from '../actionchains/base.actionchain.js';
 import { MemoryThreadName, type MemoryActionChain } from '../engine/memory/index.js';
 import logger from '../engine/logger.js';
 
+@flowRegistry.register()
 export class ActionChainFlow extends BaseFlow {
   static canHandle(event: Event, _messengerType?: MessengerType): boolean {
     return event.type === EventType.ACTION_CHAIN;
@@ -95,4 +96,3 @@ export class ActionChainFlow extends BaseFlow {
     }
   }
 }
-registerFlow(ActionChainFlow);

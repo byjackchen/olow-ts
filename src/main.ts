@@ -2,10 +2,20 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import Fastify from 'fastify';
 import { config } from './config/index.js';
-import logger from './engine/logger.js';
+import { createLogger, setLogger } from './engine/logger.js';
+
+// Initialize logger at startup — must happen before any engine import uses it
+const logger = createLogger({
+  app_log_path: config.engine.logging.app_log_path,
+  base_log_level: config.engine.logging.base_log_level,
+  isDev: config.env === 'LOCAL' || config.env === 'LOCAL_DOCKER',
+});
+setLogger(logger);
 import { Broker } from './engine/broker.js';
-import { Dispatcher } from './engine/dispatcher.js';
-import { registry } from './engine/registry.js';
+import { setMemoryConfig, setMemoryStorage } from './engine/memory/index.js';
+import * as mongo from './storage/mongo.js';
+import { Dispatcher, setDispatcherConfig } from './engine/dispatcher.js';
+import { registry, setSpace } from './engine/registry.js';
 import { ResponseMode, MessengerType, RequesterType, SystemName } from './engine/types.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -23,6 +33,20 @@ let broker: Broker;
 app.addHook('onReady', async () => {
   broker = Broker.getInstance();
   await broker.initialize();
+
+  // Wire engine subsystems
+  setDispatcherConfig({
+    max_event_loops: config.engine.max_event_loops,
+    post_msg_verbose: config.engine.post_msg_verbose,
+    developers: config.engine.developers,
+    administrators: config.engine.administrators,
+  });
+  setMemoryConfig(config.engine.memory);
+  setMemoryStorage({
+    getUser: (userId) => mongo.getUser(userId) as Promise<Record<string, unknown> | null>,
+    upsertUser: (userId, data) => mongo.upsertUser(userId, data),
+  });
+
   logger.info('Broker initialized');
 });
 
@@ -249,6 +273,9 @@ app.post(
 // ─── Start ───
 
 async function start(): Promise<void> {
+  // Set space before discovery so restrictedSpaces filtering works
+  setSpace(config.space);
+
   // Auto-discover and register flows, tools, and actionchains
   await registry.discoverModules(join(__dirname, 'flows'));
   await registry.discoverModules(join(__dirname, 'tools'));

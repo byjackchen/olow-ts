@@ -1,0 +1,9 @@
+# Local development overrides
+engine:
+  logging:
+    app_log_path: "./logs/app.log"
+    base_log_level: "debug"
+  post_msg_verbose: true
+
+server:
+  port: 5001

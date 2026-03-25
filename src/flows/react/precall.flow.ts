@@ -1,9 +1,10 @@
 import { BaseFlow } from '../base.flow.js';
 import { EventType, EventStatus, type MessengerType } from '../../engine/types.js';
 import { Event } from '../../engine/events.js';
-import { registerFlow } from '../../engine/dispatcher.js';
+import { flowRegistry } from '../../engine/registry.js';
 import logger from '../../engine/logger.js';
 
+@flowRegistry.register()
 export class ReactPrecallFlow extends BaseFlow {
   static canHandle(event: Event, _messengerType?: MessengerType): boolean {
     return event.type === EventType.REACT_PRECALL;
@@ -18,4 +19,3 @@ export class ReactPrecallFlow extends BaseFlow {
     return EventStatus.COMPLETE;
   }
 }
-registerFlow(ReactPrecallFlow);

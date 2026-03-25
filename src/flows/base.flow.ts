@@ -1,11 +1,11 @@
 import type { Event } from '../engine/events.js';
 import type { Request } from '../engine/events.js';
-import type { Broker } from '../engine/broker.js';
+import type { IBroker } from '../engine/broker-interfaces.js';
 import type { EventStatus, MessengerType, FlowStates } from '../engine/types.js';
 
 // Forward reference to avoid circular dependency
 export interface IDispatcher {
-  broker: Broker;
+  broker: IBroker;
   request: Request;
   states: FlowStates;
   eventchain: Event[];
@@ -19,7 +19,7 @@ export interface IDispatcher {
 export abstract class BaseFlow {
   protected event: Event;
   protected dispatcher: IDispatcher;
-  protected broker: Broker;
+  protected broker: IBroker;
   protected request: Request;
   statesSnapshot?: FlowStates;
 

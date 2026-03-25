@@ -21,7 +21,7 @@ import {
   MessageQueue,
 } from './types.js';
 import { ContentBlocks, determineActionType } from '../kits/content-blocks.js';
-import type { Broker } from './broker.js';
+import type { IBroker } from './broker-interfaces.js';
 import type { IMessenger } from './messengers/index.js';
 import type { ITemplate } from '../templates/base.template.js';
 
@@ -143,7 +143,7 @@ export class EventChain extends Array<Event> {
 
 export class Request {
   readonly timestamp: Date;
-  readonly broker: Broker;
+  readonly broker: IBroker;
   readonly msg: Record<string, unknown>;
   language: Language | null = null;
   channelType: ChannelType | null = null;
@@ -162,7 +162,7 @@ export class Request {
     requesterType: RequesterType;
     messenger: IMessenger | null;
     msg: Record<string, unknown>;
-    broker: Broker;
+    broker: IBroker;
     systemName?: SystemName;
   }) {
     this.timestamp = new Date();

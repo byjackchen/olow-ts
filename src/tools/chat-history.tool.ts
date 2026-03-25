@@ -2,8 +2,9 @@ import { BaseTool, type ToolTag, type ToolResult } from './base.tool.js';
 import { ToolArgumentType } from '../engine/types.js';
 import logger from '../engine/logger.js';
 import * as mongo from '../storage/mongo.js';
-import { registerTool } from '../engine/dispatcher.js';
+import { toolRegistry } from '../engine/registry.js';
 
+@toolRegistry.register({ name: 'get_chat_history' })
 export class ChatHistoryTool extends BaseTool {
   static readonly toolTag: ToolTag = {
     name: 'get_chat_history',
@@ -38,4 +39,3 @@ export class ChatHistoryTool extends BaseTool {
     }
   }
 }
-registerTool('get_chat_history', ChatHistoryTool);

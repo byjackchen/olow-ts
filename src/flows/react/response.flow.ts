@@ -4,10 +4,11 @@ import { Event } from '../../engine/events.js';
 import { AiReActAnswerTemplate, type Recommendation } from '../../templates/ai.template.js';
 import { TextTemplate } from '../../templates/text.template.js';
 import { I18n } from '../../templates/i18n.js';
-import { registerFlow } from '../../engine/dispatcher.js';
+import { flowRegistry } from '../../engine/registry.js';
 import { ContentBlocks } from '../../kits/content-blocks.js';
 import logger from '../../engine/logger.js';
 
+@flowRegistry.register()
 export class ReactResponseFlow extends BaseFlow {
   static canHandle(event: Event, _messengerType?: MessengerType): boolean {
     return event.type === EventType.REACT_RESPONSE;
@@ -109,4 +110,3 @@ export class ReactResponseFlow extends BaseFlow {
     return EventStatus.COMPLETE;
   }
 }
-registerFlow(ReactResponseFlow);

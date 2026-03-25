@@ -4,11 +4,12 @@ import { Event } from '../../engine/events.js';
 import { AiIdleTemplate } from '../../templates/ai.template.js';
 import { TextTemplate } from '../../templates/text.template.js';
 import { I18n } from '../../templates/i18n.js';
-import { registerFlow } from '../../engine/dispatcher.js';
+import { flowRegistry } from '../../engine/registry.js';
 import { config } from '../../config/index.js';
 import * as promptKit from '../../kits/prompt.kit.js';
 import logger from '../../engine/logger.js';
 
+@flowRegistry.register()
 export class ReactPlanFlow extends BaseFlow {
   static canHandle(event: Event, _messengerType?: MessengerType): boolean {
     return event.type === EventType.REACT_PLAN;
@@ -63,18 +64,18 @@ export class ReactPlanFlow extends BaseFlow {
       if (this.event.msgQueue) {
         // Try streaming first — cast queue for broker compatibility
         const queue = this.event.msgQueue as unknown as { put: (msg: unknown) => Promise<void> };
-        [success, result] = await this.broker.callLlmStream(
+        [success, result] = await this.broker.llm.callLlmStream(
           planPrompt,
           queue,
           { jsonMode: 'json_fence' },
         );
       } else {
-        [success, result] = await this.broker.callLlm(planPrompt, { jsonMode: 'json_fence' });
+        [success, result] = await this.broker.llm.callLlm(planPrompt, { jsonMode: 'json_fence' });
       }
     } catch (err) {
       logger.error({ msg: 'Plan LLM call failed, retrying without stream', err });
       try {
-        [success, result] = await this.broker.callLlm(planPrompt, { jsonMode: 'json_fence' });
+        [success, result] = await this.broker.llm.callLlm(planPrompt, { jsonMode: 'json_fence' });
       } catch (retryErr) {
         logger.error({ msg: 'Plan LLM retry also failed', err: retryErr });
       }
@@ -144,4 +145,3 @@ export class ReactPlanFlow extends BaseFlow {
     return EventStatus.COMPLETE;
   }
 }
-registerFlow(ReactPlanFlow);

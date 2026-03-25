@@ -3,9 +3,10 @@ import { EventType, EventStatus, type MessengerType, FlowMsgType } from '../engi
 import type { Event } from '../engine/events.js';
 import { TextTemplate } from '../templates/text.template.js';
 import { I18n } from '../templates/i18n.js';
-import { registerFlow } from '../engine/dispatcher.js';
+import { flowRegistry } from '../engine/registry.js';
 import logger from '../engine/logger.js';
 
+@flowRegistry.register()
 export class MenuFlow extends BaseFlow {
   static canHandle(event: Event, _messengerType?: MessengerType): boolean {
     return event.type === EventType.MENU;
@@ -27,4 +28,3 @@ export class MenuFlow extends BaseFlow {
     return EventStatus.COMPLETE;
   }
 }
-registerFlow(MenuFlow);

@@ -1,0 +1,33 @@
+{
+  "name": "@olow/engine",
+  "version": "1.0.0",
+  "description": "Olow chatbot engine - core framework",
+  "type": "module",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "^3.25.67",
+    "pino": "^9.7.0",
+    "pino-pretty": "^13.0.0",
+    "graphology": "^0.25.4",
+    "graphology-types": "^0.24.7",
+    "@modelcontextprotocol/sdk": "^1.12.3"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.3",
+    "@types/node": "^22.15.29"
+  }
+}
