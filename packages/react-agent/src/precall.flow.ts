@@ -3,6 +3,7 @@ import {
   EventType, EventStatus,
 } from '@olow/engine';
 import type { MessengerType } from '@olow/engine';
+
 const logger = getLogger();
 
 @flowRegistry.register()
@@ -12,7 +13,7 @@ export class ReactPrecallFlow extends BaseFlow {
   }
 
   async run(): Promise<EventStatus> {
-    logger.info(`ReactPrecallFlow handling precall for user ${this.request.requester.id}`);
+    logger.info(`ReactPrecallFlow for user ${this.request.requester.id}`);
     this.dispatcher.eventchain.push(new Event(EventType.REACT_PLAN));
     return EventStatus.COMPLETE;
   }
