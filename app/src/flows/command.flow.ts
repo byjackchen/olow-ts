@@ -1,7 +1,6 @@
 import {
   BaseFlow, Event, flowRegistry, getLogger,
   CoreEventType, EventStatus, FlowMsgType,
-  MemoryThreadName,
 } from '@olow/engine';
 import type { MessengerType, MemorySettings } from '@olow/engine';
 import { AppEventType } from '../events.js';
@@ -29,13 +28,8 @@ export class CommandFlow extends BaseFlow {
       if (lang === 'cn' || lang === 'en') {
         // Update settings memory language
         if ('memory' in this.request.requester) {
-          const memory = await (this.request.requester as { memory: () => Promise<{ getThread: (name: string) => { memory: MemorySettings } | undefined; setThread: (name: string, memory: unknown) => void }> }).memory();
-          const settingsThread = memory.getThread(MemoryThreadName.SETTINGS);
-          if (settingsThread) {
-            (settingsThread.memory as MemorySettings).info_maps['language'] = lang;
-          } else {
-            memory.setThread(MemoryThreadName.SETTINGS, { info_maps: { language: lang } });
-          }
+          const mem = await (this.request.requester as { memory: () => Promise<{ settings: MemorySettings; updateSettings: (s: Partial<MemorySettings>) => void }> }).memory();
+          mem.updateSettings({ info_maps: { ...mem.settings.info_maps, language: lang } });
         }
         this.dispatcher.eventchain.push(new Event(AppEventType.MENU));
       } else {

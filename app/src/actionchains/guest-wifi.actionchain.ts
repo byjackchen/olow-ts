@@ -1,6 +1,6 @@
 import {
   BaseActionChain, actionchainRegistry, getLogger,
-  EventStatus, MemoryThreadName, ACTION_CHAIN_ROOT_KEY,
+  EventStatus, ACTION_CHAIN_ROOT_KEY,
   type ToolTag,
 } from '@olow/engine';
 import { BaseTool, toolRegistry } from '@olow/engine';
@@ -44,7 +44,6 @@ class GuestWifiTool extends BaseTool {
 export class GuestWifiActionChain extends BaseActionChain {
   static readonly mainKey = MAIN_KEY;
   static readonly title = 'Fetch Guest WiFi';
-  static readonly threadName = MemoryThreadName.GUEST_WIFI;
   static readonly officeLocation = 'US-California-Palo Alto';
 
   async run(): Promise<EventStatus> {

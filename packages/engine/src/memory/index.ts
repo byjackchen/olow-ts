@@ -1,13 +1,11 @@
 // Re-export everything from @olow/memory
 export {
   Memory,
-  MemoryThreadName,
   setMemoryConfig,
   getMemoryConfig,
   setMemoryStorage,
   type MemoryConfig,
   type IMemoryStorage,
-  type MemoryThread,
   type MemoryContextGraph,
   type MemoryActionChain,
   type MemorySettings,

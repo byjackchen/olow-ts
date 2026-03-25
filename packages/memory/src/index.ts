@@ -2,7 +2,7 @@ import { type MemoryContextGraph, createDefaultContextGraph, serialize as serial
 import { type MemoryActionChain, createDefaultActionChain, MemoryActionChainSchema } from './action-chain.js';
 import { type MemorySettings, createDefaultSettings, MemorySettingsSchema } from './settings.js';
 
-// ─── Memory Config ───
+// ─── Config ───
 
 export interface MemoryConfig {
   settings_expire_seconds: number;
@@ -28,7 +28,7 @@ export function getMemoryConfig(): MemoryConfig {
   return _memoryConfig;
 }
 
-// ─── Memory Storage Interface ───
+// ─── Storage Interface ───
 
 export interface IMemoryStorage {
   getUser(userId: string): Promise<Record<string, unknown> | null>;
@@ -48,151 +48,96 @@ function getMemoryStorage(): IMemoryStorage {
   return _memoryStorage;
 }
 
-// ─── Thread Names ───
-
-export const MemoryThreadName = {
-  CONTEXTGRAPH: 'ContextGraph',
-  SETTINGS: 'Settings',
-  SKIP_GREETING: 'skip_greeting',
-  PHOTO_TICKET: 'actionchain-phototicket',
-  FAQ_FEEDBACK: 'actionchain-faqfeedback',
-  GENERAL_FEEDBACK: 'actionchain-generalfeedback',
-  TICKET_RATING: 'actionchain-rateticket',
-  SURVEY: 'actionchain-survey',
-  NOTIFICATION_SCHEDULE: 'actionchain-notificationschedule',
-  GUEST_WIFI: 'actionchain-guestwifi',
-  TENCENT_WIFI: 'actionchain-tencentwifi',
-  SITE_ENGINEER: 'actionchain-siteengineer',
-  LIVE_AGENT_SUPPORT: 'actionchain-liveagentsupport',
-  REQUEST_TIMEOFF: 'actionchain-requesttimeoff',
-  REQUEST_ACCESSORIES: 'actionchain-requestitaccessories',
-} as const;
-export type MemoryThreadName = (typeof MemoryThreadName)[keyof typeof MemoryThreadName];
-
-// ─── Memory Thread ───
-
-export interface MemoryThread<T = unknown> {
-  name: MemoryThreadName;
-  memory: T;
-  updateTime: Date;
-}
-
 // ─── Memory ───
 
 export class Memory {
   readonly userId: string;
-  private threads = new Map<string, MemoryThread>();
+  graph: MemoryContextGraph;
+  settings: MemorySettings;
+  actionchain: MemoryActionChain | null;
+
+  private _settingsUpdateTime: Date | null = null;
+  private _actionchainUpdateTime: Date | null = null;
 
   constructor(userId: string) {
     this.userId = userId;
+    this.graph = createDefaultContextGraph();
+    this.settings = createDefaultSettings();
+    this.actionchain = null;
   }
 
-  async fetchMemory(memoryThreadsDoc?: unknown[]): Promise<void> {
-    if (!memoryThreadsDoc) {
-      const doc = await getMemoryStorage().getUser(this.userId);
-      memoryThreadsDoc = (doc?.['memory_threads'] as unknown[] | undefined) ?? [];
+  async fetch(doc?: Record<string, unknown> | null): Promise<void> {
+    if (!doc) {
+      doc = await getMemoryStorage().getUser(this.userId);
     }
+    if (!doc) return;
 
     const cfg = _memoryConfig;
+    const now = new Date();
+    const mem = doc['memory'] as Record<string, unknown> | undefined;
+    if (!mem) return;
 
-    for (const threadDoc of memoryThreadsDoc as Array<Record<string, unknown>>) {
-      const name = threadDoc['name'] as MemoryThreadName;
-      const updateTime = new Date(threadDoc['update_time'] as string);
-      const memoryData = threadDoc['memory'] as Record<string, unknown>;
+    // Graph
+    const graphData = mem['graph'] as Record<string, unknown> | undefined;
+    if (graphData) {
+      this.graph = deserializeGraph(graphData);
+    }
 
-      const now = new Date();
-      if (name === MemoryThreadName.CONTEXTGRAPH) {
-        this.threads.set(name, {
-          name,
-          memory: deserializeGraph(memoryData ?? {}),
-          updateTime,
-        });
-      } else if (name === MemoryThreadName.SETTINGS) {
-        const elapsed = (now.getTime() - updateTime.getTime()) / 1000;
-        if (elapsed < cfg.settings_expire_seconds) {
-          this.threads.set(name, {
-            name,
-            memory: MemorySettingsSchema.parse(memoryData ?? {}),
-            updateTime,
-          });
-        }
-      } else if (name.startsWith('actionchain-')) {
-        const elapsed = (now.getTime() - updateTime.getTime()) / 1000;
-        if (elapsed < cfg.actionchain_expire_seconds) {
-          this.threads.set(name, {
-            name,
-            memory: MemoryActionChainSchema.parse(memoryData ?? {}),
-            updateTime,
-          });
-        }
-      } else {
-        this.threads.set(name, { name, memory: memoryData, updateTime });
+    // Settings (with expiry)
+    const settingsData = mem['settings'] as Record<string, unknown> | undefined;
+    const settingsTime = mem['settings_update_time'] as string | undefined;
+    if (settingsData && settingsTime) {
+      const updateTime = new Date(settingsTime);
+      const elapsed = (now.getTime() - updateTime.getTime()) / 1000;
+      if (elapsed < cfg.settings_expire_seconds) {
+        this.settings = MemorySettingsSchema.parse(settingsData);
+        this._settingsUpdateTime = updateTime;
+      }
+    }
+
+    // ActionChain (with expiry)
+    const acData = mem['actionchain'] as Record<string, unknown> | undefined;
+    const acTime = mem['actionchain_update_time'] as string | undefined;
+    if (acData && acTime) {
+      const updateTime = new Date(acTime);
+      const elapsed = (now.getTime() - updateTime.getTime()) / 1000;
+      if (elapsed < cfg.actionchain_expire_seconds) {
+        this.actionchain = MemoryActionChainSchema.parse(acData);
+        this._actionchainUpdateTime = updateTime;
       }
     }
   }
 
-  getThread<T = unknown>(name: MemoryThreadName): MemoryThread<T> | undefined {
-    return this.threads.get(name) as MemoryThread<T> | undefined;
-  }
+  async save(): Promise<void> {
+    pruneOldSessions(this.graph, _memoryConfig.graph_max_sessions);
 
-  setThread(name: MemoryThreadName, memory: unknown): void {
-    this.threads.set(name, { name, memory, updateTime: new Date() });
-  }
+    const now = new Date().toISOString();
+    const mem: Record<string, unknown> = {
+      graph: serializeGraph(this.graph),
+      settings: this.settings,
+      settings_update_time: this._settingsUpdateTime?.toISOString() ?? now,
+    };
 
-  removeThread(name: MemoryThreadName): boolean {
-    return this.threads.delete(name);
-  }
-
-  getThreadsByMemoryType<T>(
-    typeGuard: (m: unknown) => m is T,
-  ): MemoryThread<T>[] {
-    const result: MemoryThread<T>[] = [];
-    for (const thread of this.threads.values()) {
-      if (typeGuard(thread.memory)) {
-        result.push(thread as MemoryThread<T>);
-      }
-    }
-    return result;
-  }
-
-  getOrCreateContextGraph(): MemoryThread<MemoryContextGraph> {
-    let thread = this.threads.get(MemoryThreadName.CONTEXTGRAPH);
-    if (!thread) {
-      thread = {
-        name: MemoryThreadName.CONTEXTGRAPH,
-        memory: createDefaultContextGraph(),
-        updateTime: new Date(),
-      };
-      this.threads.set(MemoryThreadName.CONTEXTGRAPH, thread);
-    }
-    return thread as MemoryThread<MemoryContextGraph>;
-  }
-
-  async saveMemory(): Promise<void> {
-    const graphThread = this.threads.get(MemoryThreadName.CONTEXTGRAPH);
-    if (graphThread) {
-      pruneOldSessions(graphThread.memory as MemoryContextGraph, _memoryConfig.graph_max_sessions);
+    if (this.actionchain) {
+      mem['actionchain'] = this.actionchain;
+      mem['actionchain_update_time'] = this._actionchainUpdateTime?.toISOString() ?? now;
     }
 
-    const threadsDoc = [...this.threads.values()].map((thread) => {
-      let memoryData: unknown;
-      if (thread.name === MemoryThreadName.CONTEXTGRAPH) {
-        memoryData = serializeGraph(thread.memory as MemoryContextGraph);
-      } else {
-        memoryData = thread.memory;
-      }
-      return {
-        name: thread.name,
-        memory: memoryData,
-        update_time: thread.updateTime.toISOString(),
-      };
-    });
+    await getMemoryStorage().upsertUser(this.userId, { memory: mem });
+  }
 
-    await getMemoryStorage().upsertUser(this.userId, { memoryThreads: { threads: threadsDoc } as unknown as Record<string, unknown> });
+  updateSettings(settings: Partial<MemorySettings>): void {
+    this.settings = { ...this.settings, ...settings };
+    this._settingsUpdateTime = new Date();
+  }
+
+  setActionChain(ac: MemoryActionChain | null): void {
+    this.actionchain = ac;
+    this._actionchainUpdateTime = ac ? new Date() : null;
   }
 }
 
-// Re-export sub-module types
+// Re-exports
 export { type MemoryContextGraph, createDefaultContextGraph, addSession, addContentNode, getSessionContent, serialize as serializeGraph, deserialize as deserializeGraph, pruneOldSessions } from './context-graph.js';
 export type { ContextNode, ContextEdge } from './context-graph.js';
 export { type MemoryActionChain, createDefaultActionChain, MemoryActionChainSchema, ActionChainStepStatusSchema, ActionChainStepSchema, ActionChainEpisodeSchema } from './action-chain.js';

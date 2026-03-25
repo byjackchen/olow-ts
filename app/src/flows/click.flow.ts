@@ -1,7 +1,6 @@
 import {
   BaseFlow, Event, flowRegistry, getLogger,
   CoreEventType, EventStatus, FlowMsgType, ACTION_CHAIN_ROOT_KEY,
-  MemoryThreadName,
 } from '@olow/engine';
 import type { MessengerType } from '@olow/engine';
 import { AppEventType } from '../events.js';
@@ -78,10 +77,8 @@ export class ClickFlow extends BaseFlow {
       if (parts.length >= 3 && parts[1] === 'language' && 'memory' in this.request.requester) {
         const lang = parts.slice(2).join('-');
         try {
-          const mem = await (this.request.requester as { memory(): Promise<{ getThread(n: string): { memory: { info_maps: Record<string, unknown> } } | undefined; setThread(n: string, m: unknown): void }> }).memory();
-          const st = mem.getThread(MemoryThreadName.SETTINGS);
-          if (st) st.memory.info_maps['language'] = lang;
-          else mem.setThread(MemoryThreadName.SETTINGS, { info_maps: { language: lang } });
+          const mem = await (this.request.requester as { memory(): Promise<{ settings: { info_maps: Record<string, unknown> }; updateSettings: (s: unknown) => void }> }).memory();
+          mem.updateSettings({ info_maps: { ...mem.settings.info_maps, language: lang } });
         } catch { /* non-fatal */ }
       }
       this.dispatcher.eventchain.push(new Event(AppEventType.MENU));

@@ -1,8 +1,6 @@
-import type { MemoryThreadName } from './memory/index.js';
 import type { EventStatus } from './types.js';
 import type { Event } from './events.js';
 
-// Custom exceptions for ActionChain flows
 export class UnexpectedInputException extends Error {
   constructor(message = 'Unexpected input during ActionChain execution') {
     super(message);
@@ -27,7 +25,6 @@ export interface IDispatcherForChain {
 export abstract class BaseActionChain {
   static readonly mainKey: string;
   static readonly title: string;
-  static readonly threadName: MemoryThreadName;
 
   protected dispatcher: IDispatcherForChain;
   protected event: Event;

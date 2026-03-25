@@ -1,10 +1,9 @@
 import {
   BaseFlow, Event, flowRegistry, getLogger,
   CoreEventType, EventStatus, ActionType, FlowMsgType, ACTION_CHAIN_ROOT_KEY,
-  BaseActionChain, UnexpectedInputException, NoActiveException,
-  MemoryThreadName,
+  BaseActionChain, UnexpectedInputException, NoActiveException, Memory,
 } from '@olow/engine';
-import type { MessengerType, MemoryActionChain } from '@olow/engine';
+import type { MessengerType } from '@olow/engine';
 const logger = getLogger();
 import { TextTemplate, I18n } from '@olow/templates';
 
@@ -85,12 +84,8 @@ export class ActionChainFlow extends BaseFlow {
   private async cleanActionchainMemory(): Promise<void> {
     if (!('memory' in this.request.requester)) return;
     try {
-      const memory = await (this.request.requester as { memory(): Promise<{ removeThread(n: string): boolean }> }).memory();
-      for (const name of Object.values(MemoryThreadName)) {
-        if (typeof name === 'string' && name.startsWith('actionchain-')) {
-          memory.removeThread(name as MemoryThreadName);
-        }
-      }
+      const memory = await (this.request.requester as { memory(): Promise<Memory> }).memory();
+      memory.setActionChain(null);
     } catch {
       // Non-fatal
     }

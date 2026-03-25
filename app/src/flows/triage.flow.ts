@@ -1,9 +1,8 @@
 import {
   BaseFlow, Event, Request, flowRegistry, getLogger,
-  CoreEventType, EventStatus, ActionType, FlowMsgType,
-  MemoryThreadName,
+  CoreEventType, EventStatus, ActionType, FlowMsgType, Memory,
 } from '@olow/engine';
-import type { MessengerType, MemoryActionChain } from '@olow/engine';
+import type { MessengerType } from '@olow/engine';
 import { AppEventType } from '../events.js';
 import { ReactEventType } from '@olow/react-agent';
 const logger = getLogger();
@@ -84,13 +83,8 @@ export class TriageFlow extends BaseFlow {
       // Update user settings memory with language
       if ('memory' in this.request.requester) {
         try {
-          const memory = await (this.request.requester as { memory: () => Promise<{ getThread: (n: string) => { memory: { info_maps: Record<string, unknown> } } | undefined; setThread: (n: string, m: unknown) => void }> }).memory();
-          const settingsThread = memory.getThread(MemoryThreadName.SETTINGS);
-          if (settingsThread) {
-            settingsThread.memory.info_maps['language'] = detectedLang;
-          } else {
-            memory.setThread(MemoryThreadName.SETTINGS, { info_maps: { language: detectedLang } });
-          }
+          const memory = await (this.request.requester as { memory: () => Promise<Memory> }).memory();
+          memory.updateSettings({ info_maps: { ...memory.settings.info_maps, language: detectedLang } });
         } catch {
           // Non-fatal
         }
@@ -100,28 +94,16 @@ export class TriageFlow extends BaseFlow {
     // 3. Check for active ActionChain in memory
     if ('memory' in this.request.requester) {
       try {
-        const memory = await (this.request.requester as { memory: () => Promise<{ getThread: (n: string) => { name: string; memory: MemoryActionChain } | undefined; removeThread: (n: string) => boolean }> }).memory();
+        const memory = await (this.request.requester as { memory: () => Promise<Memory> }).memory();
 
-        // Find actionchain threads - keep only the latest, delete older ones
-        let latestChainThread: { name: string; memory: MemoryActionChain } | null = null;
-        for (const name of Object.values(MemoryThreadName)) {
-          if (typeof name === 'string' && name.startsWith('actionchain-')) {
-            const thread = memory.getThread(name);
-            if (thread) {
-              if (latestChainThread) {
-                memory.removeThread(latestChainThread.name as MemoryThreadName);
-              }
-              latestChainThread = thread;
-            }
-          }
-        }
-
-        if (latestChainThread) {
+        if (memory.actionchain) {
           // Route to active action chain
-          const mainKey = latestChainThread.name.replace('actionchain-', '');
-          this.dispatcher.states.actionchain = { main_key: mainKey };
-          this.dispatcher.eventchain.push(new Event(CoreEventType.ACTION_CHAIN));
-          return EventStatus.COMPLETE;
+          const mainKey = memory.actionchain.attributes['main_key'] as string | undefined;
+          if (mainKey) {
+            this.dispatcher.states.actionchain = { main_key: mainKey };
+            this.dispatcher.eventchain.push(new Event(CoreEventType.ACTION_CHAIN));
+            return EventStatus.COMPLETE;
+          }
         }
       } catch {
         // Non-fatal

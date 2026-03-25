@@ -49,8 +49,8 @@ export { ContentBlocks, determineActionType } from './content-blocks.js';
 
 // Memory
 export {
-  Memory, MemoryThreadName, setMemoryConfig, setMemoryStorage,
-  type MemoryConfig, type IMemoryStorage, type MemoryThread,
+  Memory, setMemoryConfig, setMemoryStorage,
+  type MemoryConfig, type IMemoryStorage,
   type MemoryContextGraph, type MemoryActionChain, type MemorySettings,
 } from './memory/index.js';
 

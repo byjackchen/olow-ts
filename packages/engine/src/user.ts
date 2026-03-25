@@ -24,7 +24,7 @@ export class User implements IUser {
   async memory(): Promise<Memory> {
     if (!this._memory) {
       this._memory = new Memory(this.id);
-      await this._memory.fetchMemory();
+      await this._memory.fetch();
     }
     return this._memory;
   }
@@ -64,9 +64,8 @@ export class User implements IUser {
 
     // Memory
     if (!this._memory) {
-      const memoryThreadsDoc = (doc?.['memory_threads'] as unknown[]) ?? [];
       this._memory = new Memory(this.id);
-      await this._memory.fetchMemory(memoryThreadsDoc);
+      await this._memory.fetch(doc);
     }
 
     // VIP

@@ -45,13 +45,12 @@ export class ReactIntentFlow extends BaseFlow {
 
   private async extractChatHistory(): Promise<string> {
     if (!('memory' in this.request.requester)) return '';
-    const requester = this.request.requester as { memory?: () => Promise<{ getOrCreateContextGraph: () => { memory: { nodes: Array<{ type: string; text: string }> } } }> };
+    const requester = this.request.requester as { memory?: () => Promise<{ graph: { nodes: Array<{ type: string; text: string }> } }> };
     if (typeof requester.memory !== 'function') return '';
 
     try {
-      const memory = await requester.memory();
-      const graph = memory.getOrCreateContextGraph();
-      return graph.memory.nodes
+      const mem = await requester.memory();
+      return mem.graph.nodes
         .filter((n) => n.type === 'content' || n.type === 'rewrite')
         .map((n) => n.text)
         .join('\n');

@@ -1,9 +1,8 @@
 import {
   BaseFlow, Event, flowRegistry, getLogger,
-  EventStatus, ActionType, FlowMsgType,
-  MemoryThreadName,
+  EventStatus, ActionType, FlowMsgType, Memory,
 } from '@olow/engine';
-import type { MessengerType, MemorySettings } from '@olow/engine';
+import type { MessengerType } from '@olow/engine';
 import { AppEventType } from '../events.js';
 const logger = getLogger();
 import { TextTemplate, I18n } from '@olow/templates';
@@ -28,15 +27,13 @@ export class GreetingFlow extends BaseFlow {
 
       // Check SETTINGS memory for skip_greeting flag
       if ('memory' in this.request.requester) {
-        const memory = await (this.request.requester as { memory: () => Promise<{ getThread: (name: string) => { memory: MemorySettings } | undefined; removeThread: (name: string) => void }> }).memory();
-        const settingsThread = memory.getThread(MemoryThreadName.SETTINGS);
-        if (settingsThread) {
-          const skipGreeting = (settingsThread.memory as MemorySettings).info_maps['skip_greeting'];
-          if (skipGreeting) {
-            // Clear the flag and skip greeting
-            delete (settingsThread.memory as MemorySettings).info_maps['skip_greeting'];
-            return EventStatus.COMPLETE;
-          }
+        const memory = await (this.request.requester as { memory: () => Promise<Memory> }).memory();
+        const skipGreeting = memory.settings.info_maps['skip_greeting'];
+        if (skipGreeting) {
+          // Clear the flag and skip greeting
+          const { skip_greeting: _, ...rest } = memory.settings.info_maps;
+          memory.updateSettings({ info_maps: rest });
+          return EventStatus.COMPLETE;
         }
       }
 
