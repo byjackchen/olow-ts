@@ -8,6 +8,8 @@ import {
   ResponseMode as RM,
   type SpaceType,
   type MessengerType,
+  MessengerType as MT,
+  ActionType as AT,
   type RequesterType,
   RequesterType as RT,
   type SystemName,
@@ -58,6 +60,10 @@ const DEFAULT_DISPATCHER_CONFIG: DispatcherEngineConfig = {
 };
 
 let _dispatcherConfig: DispatcherEngineConfig = DEFAULT_DISPATCHER_CONFIG;
+
+// Module-level constants (avoid per-call allocation)
+const THINK_TYPES: FlowMsgType[] = [FMT.THINK_L1, FMT.THINK_L2];
+const ARCHIVABLE_SYSTEM_ACTIONS: ReadonlySet<string> = new Set([AT.SN_TICKET_CLOSE, AT.SN_TICKET_SURVEY]);
 
 export function setDispatcherConfig(cfg: DispatcherEngineConfig): void {
   _dispatcherConfig = cfg;
@@ -346,7 +352,7 @@ export class Dispatcher implements IDispatcher {
       flowMsg.sentTo,
     );
 
-    const [formatType, message] = template.render(this.messenger?.type ?? 'Bare_Text');
+    const [formatType, message] = template.render(this.messenger?.type ?? MT.BARE_TEXT);
 
     this.responses.push({
       timestamp: new Date(),
@@ -382,12 +388,11 @@ export class Dispatcher implements IDispatcher {
     );
 
     // Determine reuse tracking ID
-    const thinkTypes: FlowMsgType[] = [FMT.THINK_L1, FMT.THINK_L2];
     let reuseTrackingId = flowMsg.reuseTrackingId;
-    if (!reuseTrackingId && thinkTypes.includes(messageType)) {
+    if (!reuseTrackingId && THINK_TYPES.includes(messageType)) {
       for (let i = this.responses.length - 1; i >= 0; i--) {
         const r = this.responses[i]!;
-        if (thinkTypes.includes(r.messageType) && r.trackingId) {
+        if (THINK_TYPES.includes(r.messageType) && r.trackingId) {
           reuseTrackingId = r.trackingId;
           break;
         }
@@ -396,7 +401,7 @@ export class Dispatcher implements IDispatcher {
 
     // Determine revoke tracking IDs
     const revokeTrackingIds = messageType === FMT.ANSWER
-      ? [...new Set(this.responses.filter((r) => thinkTypes.includes(r.messageType) && r.trackingId).map((r) => r.trackingId!))]
+      ? [...new Set(this.responses.filter((r) => THINK_TYPES.includes(r.messageType) && r.trackingId).map((r) => r.trackingId!))]
       : [];
 
     // Send
@@ -452,14 +457,9 @@ export class Dispatcher implements IDispatcher {
   async archive(): Promise<void> {
     if (!this.request || !this.cycleId) return;
 
-    const archivableSystemActions = new Set([
-      'sn_ticket_close',
-      'sn_ticket_survey',
-    ]);
-
     if (
       this.request.requester.type !== RT.USER &&
-      !archivableSystemActions.has(this.request.action)
+      !ARCHIVABLE_SYSTEM_ACTIONS.has(this.request.action)
     ) {
       logger.info('Skipped cycle archive for non-user requester');
       return;

@@ -1,4 +1,3 @@
-import { join } from 'node:path';
 import type { IBroker } from './broker-interfaces.js';
 import type { EngineConfig } from './config.js';
 import type { IMessenger } from './messengers.js';
@@ -118,10 +117,7 @@ export class OlowEngine {
     if (config?.memory) {
       setMemoryConfig(config.memory);
     }
-    setMemoryStorage({
-      getUser: (userId) => this._broker!.getUser(userId),
-      upsertUser: (userId, data) => this._broker!.upsertUser(userId, data),
-    });
+    setMemoryStorage(this._broker!);
 
     // 5. Initialize broker
     await this._broker.initialize();

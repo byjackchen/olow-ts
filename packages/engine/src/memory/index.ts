@@ -9,12 +9,14 @@ export interface MemoryConfig {
   settings_expire_seconds: number;
   actionchain_expire_seconds: number;
   graph_max_sessions: number;
+  graph_nodes_max_tokens: number;
 }
 
 const DEFAULT_MEMORY_CONFIG: MemoryConfig = {
   settings_expire_seconds: 259200,
   actionchain_expire_seconds: 300,
   graph_max_sessions: 3,
+  graph_nodes_max_tokens: 6000,
 };
 
 let _memoryConfig: MemoryConfig = DEFAULT_MEMORY_CONFIG;

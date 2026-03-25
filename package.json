@@ -6,7 +6,7 @@
   "type": "module",
   "workspaces": [
     "packages/*",
-    "apps/*"
+    "app"
   ],
   "engines": {
     "node": ">=22.0.0"
@@ -17,23 +17,8 @@
     "dev": "npm run dev --workspace=olow-app",
     "test": "vitest run",
     "test:watch": "vitest",
-    "lint": "eslint src/",
-    "lint:fix": "eslint src/ --fix"
-  },
-  "dependencies": {
-    "fastify": "^5.3.3",
-    "zod": "^3.25.67",
-    "mongodb": "^6.16.0",
-    "ioredis": "^5.6.1",
-    "pino": "^9.7.0",
-    "pino-pretty": "^13.0.0",
-    "yaml": "^2.8.0",
-    "openai": "^5.8.2",
-    "graphology": "^0.25.4",
-    "graphology-types": "^0.24.7",
-    "@slack/bolt": "^4.3.1",
-    "@modelcontextprotocol/sdk": "^1.12.3",
-    "fast-xml-parser": "^5.2.3"
+    "lint": "eslint 'packages/*/src/**/*.ts' 'apps/*/src/**/*.ts'",
+    "lint:fix": "eslint 'packages/*/src/**/*.ts' 'apps/*/src/**/*.ts' --fix"
   },
   "devDependencies": {
     "typescript": "^5.8.3",

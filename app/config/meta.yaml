@@ -1,0 +1,177 @@
+space: "OIT"
+version: "1.0.0: TypeScript Reimplementation"
+
+# ─── Engine ───
+engine:
+  max_event_loops: 30
+  click_valid_timelapse_seconds: 1800
+  user_context_buffer_seconds: 259200 # 3 days
+  greeting_silent_seconds: 3600 # 1 hour
+  recent_queries_cutoff_seconds: 900 # 15 mins
+  rolling_requests_threshold: 60
+  admin_chatgroup_id: ""
+  post_msg_verbose: ${POST_MSG_VERBOSE:-false}
+  base_llm_provider: ${BASE_LLM_PROVIDER:-openai}
+  base_llm_model: ${BASE_LLM_MODEL:-llm_gpt5_nano}
+  react_agent:
+    intent_mode: "multi-turns"
+    max_rounds: 5
+    retrieval_threshold: 0.64
+  memory:
+    settings_expire_seconds: 259200
+    actionchain_expire_seconds: 300
+    graph_max_sessions: 3
+    graph_nodes_max_tokens: 6000
+  logging:
+    app_log_path: ${LOG_PATH:-./logs/app.log}
+    max_size_mb: 100
+    backup_count: 5
+    base_log_level: ${LOG_LEVEL:-info}
+  developers: []
+  administrators: []
+
+# ─── MCP ───
+mcp_server:
+  enabled: false
+mcp_client:
+  enabled: false
+  servers: []
+
+# ─── Server ───
+server:
+  host: ${SERVER_HOST:-0.0.0.0}
+  port: ${SERVER_PORT:-5001}
+
+# ─── Auth ───
+auth:
+  api_token: ${API_TOKEN}
+
+# ─── MongoDB ───
+mongo:
+  host: ${MONGO_HOST:-localhost}
+  port: ${MONGO_PORT:-27017}
+  database: ${MONGO_DATABASE:-oitbot}
+  username: ${MONGO_USERNAME}
+  password: ${MONGO_PASSWORD}
+
+# ─── Redis ───
+redis:
+  host: ${REDIS_HOST:-localhost}
+  port: ${REDIS_PORT:-6379}
+  password: ${REDIS_PASSWORD}
+  keys:
+    peak_shaving: "peak_shaving"
+    taiji_rotation: "taiji_rotation"
+
+# ─── HTTP Client ───
+http_client:
+  timeout: 30000
+
+# ─── Error Handling ───
+error_handling:
+  retry_count: 1
+  retry_delay_ms: 500
+
+# ─── Broker ───
+broker:
+  expiretime_offset_seconds: 120
+
+# ─── WeCom ───
+wecom_bot:
+  token: ${WECOM_BOT_TOKEN}
+  aes_key: ${WECOM_BOT_AES_KEY}
+  service_id: ${WECOM_BOT_SERVICE_ID}
+  corp_id: ${WECOM_CORP_ID}
+  corp_secret: ${WECOM_CORP_SECRET}
+  text_msg_bytes_limit: 4750
+  richtext_msg_bytes_limit: 4000
+
+wecom_groupbot:
+  token: ${WECOM_GROUPBOT_TOKEN}
+  aes_key: ${WECOM_GROUPBOT_AES_KEY}
+  service_id: ${WECOM_GROUPBOT_SERVICE_ID}
+
+# ─── Slack ───
+slack:
+  bot_user_oauth_token: ${SLACK_BOT_TOKEN}
+  app_level_token: ${SLACK_APP_TOKEN}
+
+# ─── Hyaide ───
+hyaide:
+  url: ${HYAIDE_URL}
+  token: ${HYAIDE_TOKEN}
+  admin_user_token: ${HYAIDE_ADMIN_TOKEN}
+  wsid: ${HYAIDE_WSID}
+  polaris:
+    enabled: false
+    namespace: ${HYAIDE_POLARIS_NAMESPACE}
+    service: ${HYAIDE_POLARIS_SERVICE}
+    fallback_url: ${HYAIDE_POLARIS_FALLBACK_URL}
+  faq_agent_id: ${HYAIDE_FAQ_AGENT_ID}
+  faq_index_id: ${HYAIDE_FAQ_INDEX_ID}
+  intent_agent_id: ${HYAIDE_INTENT_AGENT_ID}
+  intent_index_id: ${HYAIDE_INTENT_INDEX_ID}
+  article_agent_id: ${HYAIDE_ARTICLE_AGENT_ID}
+  article_index_id: ${HYAIDE_ARTICLE_INDEX_ID}
+  llm_tokens: []
+  llmDeepseekV32_32k:
+    name: "DeepSeek-V3_2-Online-32k"
+    max_tokens: 32000
+  llmDeepseekV3_16k:
+    name: "DeepSeek-V3-Online-16K"
+    max_tokens: 16000
+
+# ─── OpenAI ───
+openai:
+  api_domain: ${OPENAI_API_DOMAIN:-https://api.openai.com}
+  api_key: ${OPENAI_API_KEY}
+  llm_gpt5_nano:
+    name: "gpt-5-nano"
+    max_tokens: 400000
+    max_completion_tokens: 10000
+  llm_gpt5_mini:
+    name: "gpt-5-mini"
+    max_tokens: 400000
+    max_completion_tokens: 10000
+  llm_gpt5_2:
+    name: "gpt-5.2"
+    max_tokens: 400000
+    max_completion_tokens: 10000
+
+# ─── Hunyuan ───
+hunyuan:
+  url_domain: ${HUNYUAN_URL}
+  auth_token: ${HUNYUAN_TOKEN}
+  models:
+    audio_realtime: "hunyuan-asr-realtime-20250707"
+    ocr: "hunyuan-ocr"
+
+# ─── Workday ───
+workday:
+  tenant_alias: ${WORKDAY_TENANT_ALIAS}
+  client_id: ${WORKDAY_CLIENT_ID}
+  client_secret: ${WORKDAY_CLIENT_SECRET}
+  url_token: ${WORKDAY_URL_TOKEN}
+  url_wql: ${WORKDAY_URL_WQL}
+
+# ─── ServiceNow ───
+servicenow:
+  url_domain: ${SERVICENOW_URL}
+  username: ${SERVICENOW_USERNAME}
+  password: ${SERVICENOW_PASSWORD}
+  contact_type: "Wecom"
+  ticket_placeholder_id: ${SERVICENOW_TICKET_PLACEHOLDER_ID}
+  ticket_monitor_account_id: ${SERVICENOW_TICKET_MONITOR_ID}
+  ticket_open_states: ["1", "2", "3", "6"]
+  ticket_states:
+    wildcard: "-1"
+    new: "1"
+    inprogress: "2"
+    onhold: "3"
+    proposed: "6"
+    closed: "7"
+
+# ─── Statistics ───
+statistics:
+  time_interval: 900
+  prob_new_topic: 0
