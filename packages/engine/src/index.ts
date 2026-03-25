@@ -50,8 +50,10 @@ export { ContentBlocks, determineActionType } from './content-blocks.js';
 // Memory
 export {
   Memory, setMemoryConfig, setMemoryStorage,
+  writeProfile, recallProfile, syncProfile,
   type MemoryConfig, type IMemoryStorage,
   type MemoryContextGraph, type MemoryActionChain, type MemorySettings,
+  type UserPersona,
 } from './memory/index.js';
 
 // Context
@@ -65,6 +67,9 @@ export { createLogger, setLogger, getLogger, type LoggerConfig } from './logger.
 
 // User
 export { User } from './user.js';
+
+// Built-in Tools
+export { MemoryTool } from './memory-tool.js';
 
 // Tool Matcher
 export { matchTools } from './tool-matcher.js';

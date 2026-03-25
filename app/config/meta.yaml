@@ -141,6 +141,18 @@ hunyuan:
     audio_realtime: "hunyuan-asr-realtime-20250707"
     ocr: "hunyuan-ocr"
 
+# ─── Taihu Gateway ───
+taihu:
+  domain: ${TAIHU_DOMAIN:-http://api.sgw.woa.com}
+  paas_id: ${TAIHU_PAAS_ID:-ohla-chatbot}
+  paas_token: ${TAIHU_PAAS_TOKEN}
+
+# ─── ITAware ───
+itaware:
+  ebus_prefix: "/ebus/ohla-itaware-dev"
+  auth_account_id: ${ITAWARE_AUTH_ACCOUNT_ID}
+  auth_api_key: ${ITAWARE_AUTH_API_KEY}
+
 # ─── Workday ───
 workday:
   tenant_alias: ${WORKDAY_TENANT_ALIAS}

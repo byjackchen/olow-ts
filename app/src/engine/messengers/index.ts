@@ -2,6 +2,7 @@ import {
   MessengerType as MT,
   ContentBlocks,
   determineActionType,
+  User,
 } from '@olow/engine';
 import type {
   IBroker,
@@ -103,11 +104,7 @@ class WebBotMessenger implements IMessenger {
     const channelType = 'single' as ChannelType;
     const sessionId = resolveSessionId(msg, channelType);
 
-    // Lazy user - actual User class will be wired in Phase 4
-    const requester: IUser = {
-      type: 'User' as const,
-      id: userId,
-    };
+    const requester = new User(userId, broker);
 
     const contentBlocks = content ? ContentBlocks.fromText(content) : ContentBlocks.empty();
     const detectedAction = action === 'enter_chat' ? 'enter_chat' : determineActionType(contentBlocks);

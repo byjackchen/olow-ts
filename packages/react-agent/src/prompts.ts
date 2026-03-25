@@ -84,6 +84,7 @@ ${JSON.stringify(latest)}
 export function reactPlanPrompt(
   processChain: unknown[],
   userPreferences: unknown[],
+  userPersona: Record<string, unknown> = {},
   availableTools: Array<{ name: string; description: string; parameters?: Record<string, { type?: string; required?: boolean; description?: string }> }>,
   roundsCount: number,
   maxRounds: number = 5,
@@ -98,6 +99,34 @@ export function reactPlanPrompt(
     }
   } else {
     userPreferencesStr = 'None available\n';
+  }
+
+  // Format user persona
+  let userPersonaStr = '';
+  const personaSummary = (userPersona['summary'] as string) ?? '';
+  const personaTopics = (userPersona['topics'] as Array<Record<string, unknown>>) ?? [];
+  const personaTags = (userPersona['tags'] as string[]) ?? [];
+  if (personaSummary || personaTopics.length > 0 || personaTags.length > 0) {
+    if (personaSummary) {
+      userPersonaStr += `Summary: ${personaSummary}\n`;
+    }
+    if (personaTags.length > 0) {
+      userPersonaStr += `Tags: ${personaTags.join(', ')}\n`;
+    }
+    if (personaTopics.length > 0) {
+      userPersonaStr += 'Recent Topics:\n';
+      for (const t of personaTopics) {
+        const topicName = (t['topic'] as string) ?? '';
+        const status = (t['status'] as string) ?? '';
+        const need = (t['need'] as string) ?? '';
+        userPersonaStr += `- ${topicName}`;
+        if (status) userPersonaStr += ` [${status}]`;
+        if (need) userPersonaStr += `: ${need}`;
+        userPersonaStr += '\n';
+      }
+    }
+  } else {
+    userPersonaStr = 'None available\n';
   }
 
   // Format process chain
@@ -132,7 +161,7 @@ Answer the user's original question by reasoning through the information you hav
 ## ReAct Reasoning Framework
 
 ### Step 1: Understand Question and Context
-Examine user question, processing histories, available tools, user preferences as well as environment context to determine:
+Examine user question, processing histories, available tools, user profile, user preferences as well as environment context to determine:
 - What is the overall question to answer?
 - What is the most recent action's purpose?
 - Are there relevant observations from prior rounds, especially the most recent one?
@@ -211,6 +240,10 @@ Leverage the following strategies in order to decide your reasoning output:
 
 ## Question and Processing Histories
 ${processChainStr}
+
+## User Profile:
+The following is a profile of the user based on their recent IT support interactions. It includes a behavioral summary, tags describing their usage patterns, and recent topics they have raised. Use this to better understand the user's context, anticipate their needs, and provide more relevant responses.
+${userPersonaStr}
 
 ## User Preferences:
 ${userPreferencesStr}

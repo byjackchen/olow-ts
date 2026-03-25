@@ -167,6 +167,7 @@ export const ReActStatesSchema = z.object({
   process_chain: z.array(z.record(z.unknown())).default([]),
   rounds_count: z.number().default(0),
   user_preferences: z.array(z.string()).default([]),
+  user_persona: z.record(z.unknown()).default({}),
   available_tools: z.array(z.record(z.unknown())).default([]),
 });
 export type ReActStates = z.infer<typeof ReActStatesSchema>;

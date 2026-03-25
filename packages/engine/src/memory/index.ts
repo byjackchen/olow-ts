@@ -9,6 +9,7 @@ export {
   type MemoryContextGraph,
   type MemoryActionChain,
   type MemorySettings,
+  type UserPersona,
   createDefaultContextGraph,
   createDefaultActionChain,
   createDefaultSettings,
@@ -20,4 +21,7 @@ export {
   serializeGraph,
   deserializeGraph,
   pruneOldSessions,
+  writeProfile,
+  recallProfile,
+  syncProfile,
 } from '@olow/memory';

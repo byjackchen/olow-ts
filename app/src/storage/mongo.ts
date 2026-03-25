@@ -265,6 +265,8 @@ export async function upsertUser(
   if (update.slackUserid !== undefined) $set['slack_userid'] = update.slackUserid;
   if (update.memoryThreads !== undefined) $set['memory_threads'] = update.memoryThreads;
   if (update.vip !== undefined) $set['vip'] = update.vip;
+  if ((update as Record<string, unknown>)['memory'] !== undefined) $set['memory'] = (update as Record<string, unknown>)['memory'];
+  if ((update as Record<string, unknown>)['context_buffer'] !== undefined) $set['context_buffer'] = (update as Record<string, unknown>)['context_buffer'];
   if (Object.keys($set).length > 0) {
     await users.updateOne({ user }, { $set }, { upsert: true });
   }

@@ -7,6 +7,8 @@ import * as wecomApi from '../services/wecom.api.js';
 import * as openaiApi from '../services/openai.api.js';
 import { callHyaideLlm } from '../services/hyaide.api.js';
 import { getUserRtx } from '../services/slack.api.js';
+import * as itawareApi from '../services/itaware.api.js';
+import * as workdayApi from '../services/workday.api.js';
 import { MessengerType as MT } from '@olow/engine';
 import type { MessengerType, UserIdType, IBroker, ILlmProvider, IMessagingProvider, CycleCreateParams, CycleUpdateParams } from '@olow/engine';
 import { UserIdType as UIT } from '@olow/engine';
@@ -25,6 +27,8 @@ export class Broker implements IBroker {
   private wecomGroupbotTokenExpiry: Date | null = null;
   private workdayToken: string | null = null;
   private workdayTokenExpiry: Date | null = null;
+  private itawareToken: string | null = null;
+  private itawareTokenExpiry: Date | null = null;
 
   private constructor() {
     this.redis = new Redis({
@@ -169,6 +173,101 @@ export class Broker implements IBroker {
     this.wecomGroupbotToken = result.token;
     this.wecomGroupbotTokenExpiry = result.expiry;
     return result.token;
+  }
+
+  async getWorkdayToken(): Promise<string> {
+    if (this.workdayToken && this.workdayTokenExpiry && this.workdayTokenExpiry > new Date()) {
+      return this.workdayToken;
+    }
+    const cached = await this.getSystemTokenBuffer('Workday');
+    if (cached) {
+      this.workdayToken = cached.token;
+      this.workdayTokenExpiry = cached.expiry;
+      return cached.token;
+    }
+    const resp = await workdayApi.getAuthToken();
+    const result = await this.updateSystemToken('Workday', resp);
+    this.workdayToken = result.token;
+    this.workdayTokenExpiry = result.expiry;
+    return result.token;
+  }
+
+  async getItawareToken(): Promise<string> {
+    if (this.itawareToken && this.itawareTokenExpiry && this.itawareTokenExpiry > new Date()) {
+      return this.itawareToken;
+    }
+    const cached = await this.getSystemTokenBuffer('ITAware');
+    if (cached) {
+      this.itawareToken = cached.token;
+      this.itawareTokenExpiry = cached.expiry;
+      return cached.token;
+    }
+    const resp = await itawareApi.getAuthToken();
+    const result = await this.updateSystemToken('ITAware', resp);
+    this.itawareToken = result.token;
+    this.itawareTokenExpiry = result.expiry;
+    return result.token;
+  }
+
+  // ─── Context + Profile Refresh (IBroker.refreshUserContext) ───
+
+  private async fetchWorkdayContext(userRtx: string, proxyRtx?: string): Promise<Record<string, unknown>> {
+    try {
+      const token = await this.getWorkdayToken();
+      const h = await workdayApi.getContext(token, proxyRtx ?? userRtx);
+      logger.info(`Workday context fetched for ${proxyRtx ?? userRtx}`);
+      return {
+        region: (h['region'] as Record<string, unknown>)?.['descriptor'] ?? '',
+        country: ((h['country'] as string) ?? '').toUpperCase(),
+        location: (h['location'] as Record<string, unknown>)?.['descriptor'] ?? '',
+        department: (h['department'] as Record<string, unknown>)?.['descriptor'] ?? '',
+        job_title: (h['jobTitle'] as Record<string, unknown>)?.['descriptor'] ?? '',
+        worker_type: (h['workerType'] as Record<string, unknown>)?.['descriptor'] ?? '',
+        company: (h['company'] as Record<string, unknown>)?.['descriptor'] ?? '',
+        display_name: h['displayName'] ?? '',
+        first_name: h['firstName'] ?? '',
+        last_name: h['lastName'] ?? '',
+        nhs_group: h['nhs_group'] ?? '',
+      };
+    } catch (err) {
+      logger.warn({ msg: `Workday context fetch failed for ${proxyRtx ?? userRtx}`, err });
+      return {};
+    }
+  }
+
+  private async fetchItawareProfile(userRtx: string): Promise<{ summary: string; topics: Array<Record<string, unknown>>; tags: string[] }> {
+    try {
+      const token = await this.getItawareToken();
+      const profile = await itawareApi.getWorkerProfile(token, userRtx);
+      logger.info(`ITAware profile fetched for ${userRtx}`);
+      return {
+        summary: profile.summary,
+        topics: profile.topics.map((t) => ({ ...t })),
+        tags: profile.tags,
+      };
+    } catch (err) {
+      logger.warn({ msg: `ITAware profile fetch failed for ${userRtx}`, err });
+      return { summary: '', topics: [], tags: [] };
+    }
+  }
+
+  async refreshUserContext(
+    userId: string,
+    proxyUserId?: string,
+  ): Promise<{
+    context: Record<string, unknown> | null;
+    profile: { summary: string; topics: Array<Record<string, unknown>>; tags: string[] } | null;
+  }> {
+    const targetRtx = proxyUserId ?? userId;
+    const [context, profile] = await Promise.all([
+      this.fetchWorkdayContext(userId, proxyUserId),
+      this.fetchItawareProfile(targetRtx),
+    ]);
+
+    return {
+      context: Object.keys(context).length > 0 ? context : null,
+      profile: (profile.summary || profile.topics.length > 0 || profile.tags.length > 0) ? profile : null,
+    };
   }
 
   // ─── Send Messages (high-level) ───

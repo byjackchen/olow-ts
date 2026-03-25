@@ -156,6 +156,18 @@ export const configSchema = z.object({
     }).default({}),
   }),
 
+  taihu: z.object({
+    domain: z.string().default('http://api.sgw.woa.com'),
+    paas_id: z.string().default(''),
+    paas_token: z.string().default(''),
+  }),
+
+  itaware: z.object({
+    ebus_prefix: z.string().default('/ebus/ohla-itaware-dev'),
+    auth_account_id: z.string().default(''),
+    auth_api_key: z.string().default(''),
+  }),
+
   workday: z.object({
     tenant_alias: z.string().default(''),
     client_id: z.string().default(''),

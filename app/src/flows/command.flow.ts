@@ -40,9 +40,24 @@ export class CommandFlow extends BaseFlow {
           FlowMsgType.ANSWER,
         );
       }
+    } else if (cmd === '/proxy') {
+      const proxyRtx = parts[1]?.toLowerCase();
+      if (proxyRtx && 'refreshContext' in this.request.requester) {
+        const target = proxyRtx === '--remove' ? undefined : proxyRtx;
+        await (this.request.requester as { refreshContext(proxy?: string): Promise<void> }).refreshContext(target);
+        const msg = target
+          ? `Context refreshed with proxy: ${target}`
+          : 'Proxy removed, context refreshed with own identity';
+        await this.event.propagateMsg(new TextTemplate([msg]), undefined, undefined, FlowMsgType.ANSWER);
+      } else {
+        await this.event.propagateMsg(
+          new TextTemplate(['Usage: /proxy <rtx> or /proxy --remove']),
+          undefined, undefined, FlowMsgType.ANSWER,
+        );
+      }
     } else if (cmd === '/help') {
       await this.event.propagateMsg(
-        new TextTemplate(['Available commands:\n/menu - Show main menu\n/start - Show main menu\n/language cn|en - Set language\n/help - Show this help message']),
+        new TextTemplate(['Available commands:\n/menu - Show main menu\n/start - Show main menu\n/language cn|en - Set language\n/proxy <rtx> - Refresh context as another user\n/help - Show this help message']),
         undefined,
         undefined,
         FlowMsgType.ANSWER,

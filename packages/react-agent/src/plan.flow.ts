@@ -34,6 +34,7 @@ export class ReactPlanFlow extends BaseFlow {
     const prompt = reactPlanPrompt(
       processChain,
       reactStates.user_preferences ?? [],
+      reactStates.user_persona as Record<string, unknown> ?? {},
       availableTools,
       reactStates.rounds_count,
       cfg.max_rounds,

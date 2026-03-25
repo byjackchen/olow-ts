@@ -81,6 +81,13 @@ export interface IBroker {
   getPeakShavingCount(): Promise<number>;
   incrementPeakShaving(ttlSeconds?: number): Promise<number>;
 
+  // User context refresh (optional — implemented by app-layer broker)
+  // Fetches external data sources (e.g. Workday context, ITAware profile) in parallel.
+  refreshUserContext?(userId: string, proxyUserId?: string): Promise<{
+    context: Record<string, unknown> | null;
+    profile: { summary: string; topics: Array<Record<string, unknown>>; tags: string[] } | null;
+  }>;
+
   // User ID resolution
   getUserId(idType: string, nonStdId: string): Promise<string>;
 
