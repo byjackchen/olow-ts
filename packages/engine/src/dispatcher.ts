@@ -230,7 +230,7 @@ export class Dispatcher implements IDispatcher {
 
   // ─── Static Entry Point ───
 
-  static async *asyncMain(opts: {
+  static async *asyncDispatch(opts: {
     broker: IBroker;
     messengerFactory: MessengerFactory;
     responseMode: ResponseMode;

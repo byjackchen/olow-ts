@@ -1,184 +1,348 @@
 # olow-ts
 
-A production-ready, modular AI chatbot engine built with TypeScript. Designed as a pluggable framework where flows, tools, templates, and agents are mountable packages.
+A production-ready, modular AI chatbot engine built with TypeScript. Designed as a layered framework where every external concern (LLM, messaging, storage, user context) is abstracted in the engine and mounted by the app.
 
 ## Architecture
 
+### Layered Design
+
+```
+ ┌─────────────────────────────────────────────────────────────────┐
+ │  app (olow-app)                          Concrete / App-specific │
+ │                                                                  │
+ │  ┌─────────┐  ┌──────────┐  ┌───────┐  ┌─────────────┐         │
+ │  │ Broker  │  │ Providers│  │ Flows │  │ Messengers  │         │
+ │  │ (IBroker│  │ LLM      │  │ Tools │  │ WeComMsg    │         │
+ │  │  impl)  │  │ Messaging│  │ Chains│  │             │         │
+ │  │         │  │ Context  │  │       │  │             │         │
+ │  └────┬────┘  └────┬─────┘  └───┬───┘  └──────┬──────┘         │
+ │       │            │            │              │                 │
+ ├───────┼────────────┼────────────┼──────────────┼─────────────────┤
+ │       ▼            ▼            ▼              ▼     Packages    │
+ │                                                                  │
+ │  @olow/engine          @olow/messengers    @olow/react-agent     │
+ │  ┌──────────────┐      ┌──────────────┐    ┌──────────────┐     │
+ │  │ IBroker      │      │ Messenger    │    │ 5-flow ReAct │     │
+ │  │ ILlmProvider │      │ WebBotMsg    │    │ pipeline     │     │
+ │  │ IMessaging.. │      │ StubMsg      │    │ Intent→Plan  │     │
+ │  │ IUserContext │      │ Templates    │    │ →Act→Respond │     │
+ │  │ IMessenger   │      │ I18n         │    │              │     │
+ │  │ Dispatcher   │      │              │    │              │     │
+ │  │ Registry     │      └──────────────┘    └──────────────┘     │
+ │  │ BaseFlow     │                                                │
+ │  │ BaseTool     │      @olow/memory                              │
+ │  │ BaseAction.. │      ┌──────────────┐                         │
+ │  └──────────────┘      │ ContextGraph │                         │
+ │                        │ Settings     │      Abstract / Generic  │
+ │                        │ ActionChain  │                         │
+ │                        └──────────────┘                         │
+ └─────────────────────────────────────────────────────────────────┘
+```
+
+### Package Dependency Graph
+
+```
+@olow/memory                          (zero dependencies)
+     │
+     ▼
+@olow/engine                          (defines all interfaces & base classes)
+     │
+     ├──────────────┐
+     ▼              ▼
+@olow/messengers   @olow/react-agent  (implementations & agents)
+     │              │
+     └──────┬───────┘
+            ▼
+          app                         (composition root — wires everything)
+```
+
+Build order: `memory → engine → messengers → react-agent → app`
+
+### Directory Structure
+
 ```
 olow-ts/
-  packages/
-    memory/           @olow/memory           Per-user memory (graph, settings, actionchain)
-    engine/           @olow/engine           Core framework (dispatcher, registry, broker, BM25, MCP)
-    templates/        @olow/templates        Shared UI templates + i18n
-    react-agent/      @olow/react-agent      ReAct reasoning agent (plan → act → respond)
-    navigate-agent/   @olow/navigate-agent   Navigation suggestion agent
-  app/                olow-app               Reference application
-  scripts/            Test and utility scripts
+├── packages/
+│   ├── memory/           @olow/memory           Pure data structures (graph, settings, actionchain)
+│   ├── engine/           @olow/engine           Interfaces, dispatcher, registry, base classes
+│   ├── messengers/       @olow/messengers       Messenger impls + templates + i18n
+│   └── react-agent/      @olow/react-agent      ReAct reasoning agent (5-flow pipeline)
+│
+├── app/                  olow-app               Reference application
+│   └── src/
+│       ├── index.ts                 Bootstrap & Fastify routes
+│       ├── config/                  YAML + .env config loading
+│       ├── engine/                  IBroker impl + providers
+│       │   ├── broker.ts            Composition root (singleton)
+│       │   ├── llm.provider.ts      ILlmProvider (OpenAI / Hyaide)
+│       │   ├── messaging.provider.ts IMessagingProvider (WeCom API)
+│       │   ├── user-context.provider.ts IUserContextRefresher (Workday + ITAware)
+│       │   └── token-cache.ts       3-tier cache (memory → DB → API)
+│       ├── messengers/              App-specific messenger implementations
+│       │   └── wecom.messenger.ts   WeComMessenger (parses + sends via WeCom API)
+│       ├── flows/                   Business logic (triage, greeting, click, etc.)
+│       ├── tools/                   Domain tools (FAQ, article, hardware-asset)
+│       ├── actionchains/            Multi-step workflows (guest-wifi)
+│       ├── services/                External API clients (wecom, openai, slack, etc.)
+│       └── storage/                 MongoDB layer
+│
+└── [config files]        package.json, tsconfig, Dockerfile, vitest.config
 ```
 
-### Dependency Graph
+## Abstract → Concrete Mounting
 
-```
-app ──→ @olow/react-agent ──→ @olow/templates ──→ @olow/engine ──→ @olow/memory
-    ──→ @olow/navigate-agent ──→ @olow/templates
-```
+The engine defines **interfaces**. The app provides **implementations**. They connect at bootstrap via the builder pattern and decorator-based registry.
 
-## Key Features
+### Interfaces (engine defines)
 
-- **Event-driven dispatcher** — async generator streaming (SSE), dependency-resolved event chain
-- **ReAct reasoning agent** — multi-round tool execution with streaming think tokens (think_l2/l3)
-- **Pluggable broker** — `IBroker` with `ILlmProvider` + `IMessagingProvider` sub-providers
-- **BM25 tool matching** — specialized tools discovered by local text similarity, no embedding service needed
-- **MCP client** — connect to external MCP servers (stdio/sse/streamable-http), proxy tools as native `BaseTool`
-- **Open type system** — `EventType`/`ActionType` are extensible strings; each package defines its own constants
-- **Template provider** — agents ship with `@olow/templates` defaults, apps can override via `set*TemplateProvider()`
-- **Per-user memory** — flat model with `graph` (conversation context), `settings` (preferences), `actionchain` (workflow state), all with configurable expiry
-- **Structural stream parsing** — LLM output parsed into think_l2 (reasoning tokens), think_l3 (thought content), answer; `<think>` tags and JSON `"thought"` field extraction supported
-- **Config with env interpolation** — single `meta.yaml` with `${VAR:-default}` placeholders, secrets in `.env`
+| Interface | Purpose | Mounted by |
+|-----------|---------|------------|
+| `IBroker` | Storage, cache, lifecycle, user ID resolution | `Broker` singleton in app |
+| `ILlmProvider` | LLM call + streaming | `LlmProvider` (OpenAI / Hyaide) |
+| `IMessagingProvider` | Out-of-band message sending (notifications, errors) | `MessagingProvider` (WeCom API) |
+| `IUserContextRefresher` | Fetch user context from external HR/profile systems | `UserContextProvider` (Workday + ITAware) |
+| `IMessenger` | Parse inbound messages + send replies per platform | `WeComMessenger`, `WebBotMessenger` |
+| `BaseFlow` | Handle a specific event type | App flows (triage, greeting, click...) |
+| `BaseTool` | Execute a tool action | App tools (FAQ, article, hardware-asset...) |
+| `BaseActionChain` | Multi-step interactive workflow | App chains (guest-wifi) |
+| `ITemplate` | Render message content for a messenger type | Templates in `@olow/messengers` |
 
-## Quick Start
+### Mounting Mechanisms
 
-```bash
-# Install
-npm install
-
-# Build all packages (in dependency order)
-npm run build
-
-# Copy and configure environment
-cp .env.example .env
-# Edit .env with your API keys (OpenAI, ServiceNow, Hyaide, etc.)
-
-# Run locally with Docker
-docker compose up --build -d
-
-# Test streaming endpoint
-./scripts/test-web-bot-stream.sh "How do I connect to guest wifi?"
-./scripts/test-web-bot-stream.sh "Palo Alto的guest wifi"
-./scripts/test-web-bot-stream.sh --raw "hello"
-```
-
-## Creating a New App
+**1. Builder pattern (explicit wiring)**
 
 ```typescript
-import { OlowEngine, getLogger } from '@olow/engine';
-import { setReactAgentConfig } from '@olow/react-agent';
-import '@olow/navigate-agent';
+const broker = Broker.getInstance();
+broker.setMessagingProvider(new MessagingProvider(broker.wecomBotTokenCache));
 
 const engine = await OlowEngine.create()
-  .withConfig(config.engine)
-  .withBroker(myBroker)
-  .withMessengerFactory(createMessenger)
-  .withSpace('oit')
-  .addFlowDir('./flows')
-  .addToolDir('./tools')
-  .addActionChainDir('./actionchains')
+  .withConfig(config.engine)           // engine config (Zod-validated)
+  .withBroker(broker)                  // IBroker implementation
+  .withMessengerFactory(Messenger.create) // MessengerFactory function
+  .addFlowDir('./flows')               // auto-discover flows
+  .addToolDir('./tools')               // auto-discover tools
+  .addActionChainDir('./actionchains') // auto-discover actionchains
+  .addMessengerDir('./messengers')     // auto-discover messengers
   .initialize();
-
-// Define your own routes — engine handles init, you own the HTTP layer
-app.post('/chat', async (req, reply) => {
-  const stream = engine.processRequest({
-    responseMode: ResponseMode.STREAM,
-    space: 'oit',
-    messengerType: MessengerType.WEB_BOT,
-    requesterType: RequesterType.USER,
-    inMsg: req.body,
-  });
-  // SSE streaming
-  for await (const output of stream) {
-    reply.raw.write(`data: ${JSON.stringify(output)}\n\n`);
-  }
-});
 ```
 
-## Adding a Custom Tool
+**2. Decorator registry (auto-registration on import)**
+
+```typescript
+// Flows, tools, actionchains, messengers register via decorators:
+@flowRegistry.register()
+export class TriageFlow extends BaseFlow { ... }
+
+@toolRegistry.register({ name: 'faq_search' })
+export class FaqTool extends BaseTool { ... }
+
+@messengerRegistry.register({ name: 'WeCom_Bot' })
+export class WeComMessenger implements IMessenger { ... }
+
+// Engine discovers modules by scanning directories:
+// addFlowDir() → flowRegistry.discoverModules(dir)
+// addMessengerDir() → messengerRegistry.discoverModules(dir)
+```
+
+**3. Messenger factory (runtime lookup)**
+
+```typescript
+// Messenger.create() queries messengerRegistry at runtime:
+class Messenger {
+  static create(type: MessengerType): IMessenger {
+    const Class = messengerRegistry.getRegistered().get(type);
+    if (Class) return new Class();
+    return new StubMessenger(type);  // fallback
+  }
+}
+```
+
+**4. Pluggable routing (side-effect registration)**
+
+```typescript
+// app/src/events.ts — registered on import
+registerSystemActionParser((msg) => { ... });
+registerEventRouter((action, msg, channelType) => { ... });
+```
+
+## Initialization Sequence
+
+```
+1. Config loaded            config/ → YAML + .env → Zod validation
+2. Broker created           Singleton with Redis, MongoDB, token caches
+3. Providers mounted        LlmProvider, MessagingProvider, UserContextProvider
+4. OlowEngine.initialize()
+   ├── Logger setup
+   ├── Dispatcher config
+   ├── Memory config + storage binding
+   ├── Broker.initialize()     (Redis connect, MongoDB connect)
+   ├── Module discovery        (scan dirs → import → decorators fire → registry populated)
+   │   ├── flowRegistry        ← app/src/flows/*.ts
+   │   ├── toolRegistry        ← app/src/tools/*.ts
+   │   ├── actionchainRegistry ← app/src/actionchains/*.ts
+   │   └── messengerRegistry   ← app/src/messengers/*.ts + @olow/messengers (WebBot)
+   └── MCP proxy (if configured)
+5. Fastify routes bound
+6. Server listening
+```
+
+## Request Lifecycle
+
+```
+HTTP Request (e.g. POST /web_bot)
+  │
+  ▼
+engine.processRequest({ responseMode, messengerType, requesterType, inMsg })
+  │
+  ▼
+Dispatcher.asyncMain()
+  ├── messengerFactory(type)          → Messenger.create() → registry lookup
+  │                                      WebBot / WeCom / Stub
+  ├── messenger.initRequest(broker, msg)
+  │   └── parse platform-specific payload → Request object
+  │       (userId, content, action, channelType, sessionId)
+  │
+  ├── request.initEvent()             → pluggable EventRouter → initial Event
+  │
+  ▼
+Event Loop (loopEventChain — async generator)
+  │
+  ├─ For each Event with satisfied dependencies:
+  │   ├── Find FlowClass via FlowClass.canHandle(event, messengerType)
+  │   ├── flow = new FlowClass(dispatcher, event)
+  │   ├── flow.run()
+  │   │   ├── event.propagateMsg(template)  → MessageQueue
+  │   │   ├── dispatcher.eventchain.push(new Event(...))  → chain new events
+  │   │   └── broker.llm.callLlm / callLlmStream
+  │   └── yield FlowMsg / StreamDeltaFlowMsg
+  │
+  ├─ STREAM mode:
+  │   ├── decodeMsg(flowMsg) → SSE: data: {"type":"message","data":{...}}
+  │   └── stream_delta      → SSE: data: {"type":"stream_delta","data":{...}}
+  │
+  ├─ POST mode:
+  │   └── postMsg(flowMsg) → messenger.say() → platform-specific send
+  │       WeComMessenger: wecom.api.sendSingleText() (direct, with token retry)
+  │       WebBotMessenger: no-op (already yielded via SSE)
+  │
+  └─ finally:
+      ├── await backgroundTasks
+      └── archiveCycle() → MongoDB
+```
+
+## Extension Guide
+
+### Adding a Custom Flow
+
+```typescript
+import { BaseFlow, Event, flowRegistry, EventStatus } from '@olow/engine';
+
+@flowRegistry.register()
+export class MyFlow extends BaseFlow {
+  static canHandle(event: Event): boolean {
+    return event.type === 'my_event';
+  }
+
+  async run(): Promise<EventStatus> {
+    // Access: this.request, this.broker, this.dispatcher, this.event
+    await this.event.propagateMsg(new TextTemplate(['Hello!']));
+    return EventStatus.COMPLETE;
+  }
+}
+```
+
+### Adding a Custom Tool
 
 ```typescript
 import { BaseTool, toolRegistry, ToolArgumentType } from '@olow/engine';
-import type { ToolTag, ToolResult } from '@olow/engine';
 
 @toolRegistry.register({ name: 'my_tool' })
 export class MyTool extends BaseTool {
-  static readonly toolTag: ToolTag = {
+  static readonly toolTag = {
     name: 'my_tool',
     labelName: 'My Tool',
-    isSpecialized: false,     // true = only visible when BM25 matches intentHints
+    isSpecialized: false,
     mcpExposable: true,
     actionchainMainKey: null,
     description: 'What this tool does',
     parameters: {
       query: { type: ToolArgumentType.STR, required: true, description: 'Search query' },
     },
-    intentHints: ['keyword1', 'keyword2'],  // used by BM25 when isSpecialized=true
   };
 
-  static async run(dispatcher: unknown, event: unknown, query?: string): Promise<ToolResult> {
+  static async run(_dispatcher: unknown, _event: unknown, query?: string) {
     return { success: true, data: 'result' };
   }
 }
 ```
 
-## Extending Event/Action Types
-
-Each package defines its own event types. The engine only provides core types:
+### Adding a Custom Messenger
 
 ```typescript
-// Engine core
-const CoreEventType = { TRIAGE: 'triage', COMMAND: 'command', UNKNOWN: 'unknown', ... };
+// app/src/messengers/slack.messenger.ts
+import { messengerRegistry, MessengerType as MT } from '@olow/engine';
+import type { IMessenger } from '@olow/engine';
 
-// React agent package
-const ReactEventType = { REACT_INTENT: 'react_intent', REACT_PLAN: 'react_plan', ... };
+@messengerRegistry.register({ name: MT.SLACK_BOT })
+export class SlackMessenger implements IMessenger {
+  readonly type = MT.SLACK_BOT;
+  readonly supportsStreaming = false;
 
-// Your app
-const AppEventType = { GREETING: 'greeting', TICKET_PUSH: 'ticket_push', ... };
+  initRequest(broker, requesterType, msg) { /* parse Slack payload */ }
+  async say(opts) { /* send via Slack API */ }
+}
+```
 
-// Register routing at startup
-registerEventRouter((action, msg, channelType) => {
-  if (action === 'enter_chat') return 'greeting';
-  return null;  // fall through to next router
-});
+### Swapping Providers (different project)
+
+```typescript
+// A different project can implement its own providers:
+class MyBroker implements IBroker {
+  get llm() { return new AzureOpenAIProvider(); }       // instead of Hyaide
+  get messaging() { return new TeamsProvider(); }        // instead of WeCom
+  refreshUserContext(id) { return ldapLookup(id); }      // instead of Workday
+  // ... storage methods using PostgreSQL instead of MongoDB
+}
 ```
 
 ## Streaming Output Format
 
-The `/web_bot?mode=stream` endpoint returns Server-Sent Events:
+`POST /web_bot?mode=stream` returns Server-Sent Events:
 
 | Event Type | Message Type | Description |
 |------------|-------------|-------------|
 | `message` | `think_l1` | Status indicator ("Analyzing your request...") |
-| `message` | `think_l2` | Planning status / tool label ("🔧 FAQ Search") |
+| `message` | `think_l2` | Planning status |
 | `stream_delta` | `think_l2` | Reasoning tokens (DeepSeek `reasoning_content`) |
-| `stream_delta` | `think_l3` | Thought content from LLM plan (streamed from `"thought"` JSON field) |
+| `stream_delta` | `think_l3` | Thought content (streamed from `"thought"` JSON field) |
 | `message` | `answer` | Final response text |
-| `message` | `answer` (image) | Media attachment (base64) |
-| `states` | — | Full flow states with ReAct process chain |
-
-## Memory Model
-
-Per-user, flat structure with expiry:
-
-```typescript
-class Memory {
-  graph: MemoryContextGraph;            // conversation context (nodes + sessions)
-  settings: MemorySettings;             // user preferences (language, etc.)
-  actionchain: MemoryActionChain | null; // active workflow state (5min expiry)
-
-  updateSettings(s: Partial<MemorySettings>): void;
-  setActionChain(ac: MemoryActionChain | null): void;
-  fetch(): Promise<void>;   // load from storage
-  save(): Promise<void>;    // persist to storage
-}
-```
+| `states` | -- | Full flow states with ReAct process chain |
 
 ## Packages
 
 | Package | Deps | Description |
 |---------|------|-------------|
 | `@olow/memory` | zod | Per-user memory: context graph, settings, actionchain |
-| `@olow/engine` | memory, pino, zod, mcp-sdk, fast-xml-parser | Dispatcher, registry, broker interfaces, BM25 matcher, MCP proxy, logger, stream parser |
-| `@olow/templates` | engine | TextTemplate, AiIdleTemplate, AiReActAnswerTemplate, GuestWifiTemplate, I18n |
-| `@olow/react-agent` | engine, templates | ReAct flows (intent → precall → plan → act → response), prompts, BM25 tool selection |
-| `@olow/navigate-agent` | engine, templates | Navigation suggestion flow |
+| `@olow/engine` | memory, pino, zod, mcp-sdk | Interfaces, dispatcher, registry, base classes, BM25 matcher, MCP proxy |
+| `@olow/messengers` | engine | Messenger factory, WebBot/Stub impls, templates, i18n |
+| `@olow/react-agent` | engine, messengers | ReAct flows (intent -> precall -> plan -> act -> response) |
+
+## Quick Start
+
+```bash
+npm install
+npm run build
+cp .env.example .env   # configure API keys
+
+# Docker
+docker compose up --build -d
+
+# Test
+curl -N -X POST 'http://localhost:5001/web_bot?mode=stream' \
+  -H 'Authorization: Bearer <token>' \
+  -H 'Content-Type: application/json' \
+  -d '{"UserId":"test","content":"hello","action":"enter_chat"}'
+```
 
 ## License
 

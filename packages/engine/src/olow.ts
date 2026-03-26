@@ -164,7 +164,7 @@ export class OlowEngineInstance {
     inMsg?: Record<string, unknown>;
     systemName?: SystemName;
   }): AsyncGenerator<BotEngineStreamOutput> {
-    yield* Dispatcher.asyncMain({
+    yield* Dispatcher.asyncDispatch({
       broker: this.broker,
       messengerFactory: this.messengerFactory,
       ...opts,
