@@ -1,6 +1,6 @@
 import {
   BaseFlow, Event, flowRegistry, getLogger,
-  EventStatus, ActionType, FlowMsgType, Memory,
+  EventStatus, ActionType, FlowMsgType,
 } from '@olow/engine';
 import type { MessengerType } from '@olow/engine';
 import { AppEventType } from '../events.js';
@@ -20,14 +20,16 @@ export class GreetingFlow extends BaseFlow {
     logger.info(`GreetingFlow for user ${userId}`);
 
     if (this.request.action === ActionType.ENTER_CHAT) {
+      const { requester } = this.request;
+
       // Check VIP status and notify admin in background
-      if ('vip' in this.request.requester) {
+      if ('vip' in requester) {
         this.dispatcher.backgroundTasks.push(this.notifyVip());
       }
 
       // Check SETTINGS memory for skip_greeting flag
-      if ('memory' in this.request.requester) {
-        const memory = await (this.request.requester as { memory: () => Promise<Memory> }).memory();
+      if ('memory' in requester && requester.memory) {
+        const memory = await requester.memory();
         const skipGreeting = memory.settings.info_maps['skip_greeting'];
         if (skipGreeting) {
           // Clear the flag and skip greeting

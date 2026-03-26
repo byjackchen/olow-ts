@@ -1,9 +1,9 @@
 import {
   BaseFlow, Event, flowRegistry, getLogger,
   CoreEventType, EventStatus, ActionType, FlowMsgType, ACTION_CHAIN_ROOT_KEY,
-  BaseActionChain, UnexpectedInputException, NoActiveException, Memory,
+  BaseActionChain, UnexpectedInputException, NoActiveException,
 } from '@olow/engine';
-import type { MessengerType } from '@olow/engine';
+import type { MessengerType, IDispatcher } from '@olow/engine';
 const logger = getLogger();
 import { TextTemplate, I18n } from '@olow/templates';
 
@@ -25,7 +25,7 @@ export class ActionChainFlow extends BaseFlow {
     }
 
     // Look up the actionchain class
-    const ChainClass = this.dispatcher.actionchainsMap.get(mainKey) as typeof BaseActionChain | undefined;
+    const ChainClass = this.dispatcher.actionchainsMap.get(mainKey);
     if (!ChainClass) {
       logger.error(`ActionChain not found for key: ${mainKey}`);
       return EventStatus.NO_HANDLER;
@@ -48,10 +48,8 @@ export class ActionChainFlow extends BaseFlow {
 
     // Execute the actionchain
     try {
-      const chain = new (ChainClass as unknown as new (d: unknown, e: Event) => BaseActionChain)(
-        this.dispatcher,
-        this.event,
-      );
+      const ChainCtor = ChainClass as unknown as new (d: IDispatcher, e: Event) => BaseActionChain;
+      const chain = new ChainCtor(this.dispatcher, this.event);
       await chain.run();
     } catch (err) {
       if (err instanceof UnexpectedInputException) {
@@ -82,9 +80,10 @@ export class ActionChainFlow extends BaseFlow {
   }
 
   private async cleanActionchainMemory(): Promise<void> {
-    if (!('memory' in this.request.requester)) return;
+    const { requester } = this.request;
+    if (!('memory' in requester) || !requester.memory) return;
     try {
-      const memory = await (this.request.requester as { memory(): Promise<Memory> }).memory();
+      const memory = await requester.memory();
       memory.setActionChain(null);
     } catch {
       // Non-fatal

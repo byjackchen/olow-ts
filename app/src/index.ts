@@ -8,9 +8,8 @@ import {
   type BotEngineStreamOutput,
 } from '@olow/engine';
 import { Broker } from './engine/broker.js';
-import { createMessenger } from './engine/messengers/index.js';
+import { createMessenger } from '@olow/engine';
 import { setReactAgentConfig } from '@olow/react-agent';
-import '@olow/navigate-agent';
 import './events.js'; // registers system action parsers and event routers
 
 const __dirname = dirname(fileURLToPath(import.meta.url));

@@ -12,8 +12,8 @@
     "node": ">=22.0.0"
   },
   "scripts": {
-    "build": "npm run build -w @olow/memory && npm run build -w @olow/engine && npm run build -w @olow/templates && npm run build -w @olow/react-agent && npm run build -w @olow/navigate-agent && npm run build -w olow-app",
-    "typecheck": "npm run typecheck -w @olow/memory && npm run typecheck -w @olow/engine && npm run typecheck -w @olow/templates && npm run typecheck -w @olow/react-agent && npm run typecheck -w @olow/navigate-agent && npm run typecheck -w olow-app",
+    "build": "npm run build -w @olow/memory && npm run build -w @olow/engine && npm run build -w @olow/templates && npm run build -w @olow/react-agent && npm run build -w olow-app",
+    "typecheck": "npm run typecheck -w @olow/memory && npm run typecheck -w @olow/engine && npm run typecheck -w @olow/templates && npm run typecheck -w @olow/react-agent && npm run typecheck -w olow-app",
     "dev": "npm run dev --workspace=olow-app",
     "test": "vitest run",
     "test:watch": "vitest",

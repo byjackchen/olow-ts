@@ -44,15 +44,14 @@ export class ReactIntentFlow extends BaseFlow {
   }
 
   private async extractChatHistory(): Promise<string> {
-    if (!('memory' in this.request.requester)) return '';
-    const requester = this.request.requester as { memory?: () => Promise<{ graph: { nodes: Array<{ type: string; text: string }> } }> };
-    if (typeof requester.memory !== 'function') return '';
+    const { requester } = this.request;
+    if (!('memory' in requester) || !requester.memory) return '';
 
     try {
       const mem = await requester.memory();
       return mem.graph.nodes
-        .filter((n) => n.type === 'content' || n.type === 'rewrite')
-        .map((n) => n.text)
+        .filter((n: { type: string; text: string }) => n.type === 'content' || n.type === 'rewrite')
+        .map((n: { text: string }) => n.text)
         .join('\n');
     } catch {
       return '';
@@ -108,12 +107,11 @@ export class ReactIntentFlow extends BaseFlow {
     const specialized: Array<{ toolTag: ToolTag }> = [];
 
     for (const [, tool] of this.dispatcher.toolsMap) {
-      const t = tool as { toolTag?: ToolTag };
-      if (!t.toolTag) continue;
-      if (t.toolTag.isSpecialized) {
-        specialized.push({ toolTag: t.toolTag });
+      if (!tool.toolTag) continue;
+      if (tool.toolTag.isSpecialized) {
+        specialized.push({ toolTag: tool.toolTag });
       } else {
-        general.push(toEntry(t.toolTag));
+        general.push(toEntry(tool.toolTag));
       }
     }
 

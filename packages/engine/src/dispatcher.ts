@@ -9,21 +9,12 @@ import {
   ResponseMode as RM,
   type SpaceType,
   type MessengerType,
-  MessengerType as MT,
   type RequesterType,
   RequesterType as RT,
   type SystemName,
-  type FlowMsgType,
-  FlowMsgType as FMT,
-  type SentToType,
-  SentToType as STT,
-  type ChannelType,
-  ChannelType as CT,
   type FlowStates,
   FlowStatesSchema,
   type BotEngineStreamOutput,
-  type DecodedMsg,
-  type StreamDeltaMsg,
   MessageQueue,
 } from './types.js';
 import {
@@ -31,17 +22,17 @@ import {
   EventChain,
   Request,
   ResponseChain,
-  SystemRequester,
   type FlowMsg,
   type StreamDeltaFlowMsg,
-  type UniversalResponse,
-  type IUser,
 } from './events.js';
 import type { IBroker } from './broker-interfaces.js';
 import { createMessenger, type IMessenger } from './messengers.js';
 import { BaseFlow, type IDispatcher } from './base-flow.js';
-import type { ITemplate } from './base-template.js';
+import type { BaseTool } from './base-tool.js';
+import type { BaseActionChain } from './base-actionchain.js';
 import { flowRegistry, toolRegistry, actionchainRegistry } from './registry.js';
+import { archiveCycle } from './archiver.js';
+import { decodeMsg, postMsg } from './message-handler.js';
 
 // ─── Engine Config for Dispatcher ───
 
@@ -64,9 +55,6 @@ const DEFAULT_DISPATCHER_CONFIG: DispatcherEngineConfig = {
 let _dispatcherConfig: DispatcherEngineConfig = DEFAULT_DISPATCHER_CONFIG;
 let _archivableActions: ReadonlySet<string> = new Set();
 
-// Module-level constants (avoid per-call allocation)
-const THINK_TYPES: FlowMsgType[] = [FMT.THINK_L1, FMT.THINK_L2];
-
 export function setDispatcherConfig(cfg: DispatcherEngineConfig): void {
   _dispatcherConfig = cfg;
   _archivableActions = new Set(cfg.archivableSystemActions ?? []);
@@ -80,8 +68,8 @@ export class Dispatcher implements IDispatcher {
   responses: ResponseChain;
   states: FlowStates;
   flows: Array<typeof BaseFlow>;
-  toolsMap: Map<string, unknown>;
-  actionchainsMap: Map<string, unknown>;
+  toolsMap: Map<string, typeof BaseTool>;
+  actionchainsMap: Map<string, typeof BaseActionChain>;
   backgroundTasks: Promise<unknown>[] = [];
 
   // Set during async initialization
@@ -96,8 +84,8 @@ export class Dispatcher implements IDispatcher {
     this.responses = new ResponseChain();
     this.states = FlowStatesSchema.parse({});
     this.flows = [...flowRegistry.getRegistered<typeof BaseFlow>().values()];
-    this.toolsMap = toolRegistry.getRegistered();
-    this.actionchainsMap = actionchainRegistry.getRegistered();
+    this.toolsMap = toolRegistry.getRegistered<typeof BaseTool>();
+    this.actionchainsMap = actionchainRegistry.getRegistered<typeof BaseActionChain>();
   }
 
   async asyncInitialize(
@@ -116,7 +104,6 @@ export class Dispatcher implements IDispatcher {
 
     this.messenger = messengerType ? createMessenger(messengerType) : null;
 
-    // Create Request
     if (requesterType === RT.USER && messengerType) {
       this.request = new Request({
         requesterType,
@@ -153,7 +140,6 @@ export class Dispatcher implements IDispatcher {
     const msgQueue = new MessageQueue<FlowMsg | StreamDeltaFlowMsg>();
 
     try {
-      // Outer loop: blocking await until first task completes
       while (true) {
         currentLoop++;
         if (currentLoop > maxLoops) {
@@ -161,7 +147,6 @@ export class Dispatcher implements IDispatcher {
           break;
         }
 
-        // Inner loop: start tasks for events with satisfied dependencies
         for (const event of this.eventchain) {
           if (
             event.status === ES.AWAITING &&
@@ -176,35 +161,26 @@ export class Dispatcher implements IDispatcher {
           }
         }
 
-        // All done?
         if (runningTasks.size === 0) {
           const remaining = this.eventchain.filter((e) => e.status === ES.AWAITING);
           if (remaining.length === 0) break;
           throw new Error(`Deadlock: ${remaining.length} events cannot start`);
         }
 
-        // Event-driven loop: yield messages and process completed tasks
         while (runningTasks.size > 0) {
-          // Drain message queue
           while (msgQueue.hasMessages()) {
             const msg = msgQueue.getNoWait();
             if (msg) yield msg;
           }
 
-          // Race: message arrival vs task completion
           const taskPromises = [...runningTasks.entries()].map(
             ([event, task]) => task.then((status) => ({ event, status })),
           );
           const msgWait = msgQueue.waitForMessage().then(() => null);
-
           const result = await Promise.race([...taskPromises, msgWait]);
 
-          if (result === null) {
-            // Message arrived — drain in next iteration
-            continue;
-          }
+          if (result === null) continue;
 
-          // Task completed
           const { event, status } = result;
           event.status = status;
           logger.info(`Completed event ${event.type} with status ${status}`);
@@ -214,7 +190,7 @@ export class Dispatcher implements IDispatcher {
           }
 
           runningTasks.delete(event);
-          break; // Back to outer loop to check for new events
+          break;
         }
       }
     } catch (err) {
@@ -222,18 +198,19 @@ export class Dispatcher implements IDispatcher {
       await this.notifyEngineMsg(String(err));
     } finally {
       msgQueue.close();
-
-      // Drain remaining messages
       while (msgQueue.hasMessages()) {
         const msg = msgQueue.getNoWait();
         if (msg) yield msg;
       }
-
-      // Wait for background tasks
       await Promise.allSettled(this.backgroundTasks);
-
-      // Archive
-      await this.archive();
+      await archiveCycle({
+        request: this.request,
+        cycleId: this.cycleId,
+        responses: this.responses,
+        states: this.states,
+        broker: this.broker,
+        archivableActions: _archivableActions,
+      });
     }
   }
 
@@ -247,7 +224,8 @@ export class Dispatcher implements IDispatcher {
     }
 
     logger.info(`Event ${event.type} found handler class ${FlowClass.name}`);
-    const flow = new (FlowClass as unknown as new (d: Dispatcher, e: Event) => BaseFlow)(this, event);
+    const FlowCtor = FlowClass as unknown as new (d: Dispatcher, e: Event) => BaseFlow;
+    const flow = new FlowCtor(this, event);
     event.bindFlow(flow);
     const status = await flow.run();
     flow.statesSnapshot = { ...this.states };
@@ -267,15 +245,9 @@ export class Dispatcher implements IDispatcher {
   }): AsyncGenerator<BotEngineStreamOutput> {
     const dispatcher = new Dispatcher(opts.broker);
     await dispatcher.asyncInitialize(
-      opts.space,
-      opts.messengerType,
-      opts.requesterType,
-      opts.inMsg,
-      opts.systemName,
+      opts.space, opts.messengerType, opts.requesterType, opts.inMsg, opts.systemName,
     );
 
-    // Set request context for logging — AsyncLocalStorage.run doesn't support
-    // async generators directly, so we enter the store manually
     requestContext.enterWith({
       cycleId: dispatcher.cycleId ?? '',
       requesterType: dispatcher.request?.requester?.type ?? '',
@@ -301,7 +273,7 @@ export class Dispatcher implements IDispatcher {
             } satisfies BotEngineStreamOutput;
           } else {
             const flowMsg = msg as FlowMsg;
-            const decoded = await dispatcher.decodeMsg(flowMsg);
+            const decoded = await decodeMsg(flowMsg, dispatcher.request, dispatcher.messenger, dispatcher.responses);
             yield {
               type: 'message' as const,
               data: decoded,
@@ -310,7 +282,7 @@ export class Dispatcher implements IDispatcher {
         } else if (opts.responseMode === RM.POST) {
           if (!('delta' in msg)) {
             const flowMsg = msg as FlowMsg;
-            await dispatcher.postMsg(flowMsg);
+            await postMsg(flowMsg, dispatcher, dispatcher.request, dispatcher.messenger, dispatcher.responses, _dispatcherConfig.post_msg_verbose);
           }
         }
       }
@@ -319,116 +291,10 @@ export class Dispatcher implements IDispatcher {
       await dispatcher.notifyEngineMsg(String(err));
     }
 
-    // Final states output
     yield {
       type: 'states' as const,
       data: dispatcher.states,
     } satisfies BotEngineStreamOutput;
-  }
-
-  // ─── Message Handling ───
-
-  async prepareMsg(
-    template: ITemplate,
-    sentToType?: SentToType,
-    sentTo?: string,
-  ): Promise<{ template: ITemplate; sentToType: SentToType; sentTo: string }> {
-    if (!sentToType) {
-      if (this.request.channelType === CT.SINGLE) sentToType = STT.USER;
-      else if (this.request.channelType === CT.GROUP) sentToType = STT.GROUPCHAT;
-      else throw new Error('sentToType is required');
-    }
-
-    if (!sentTo) {
-      if (sentToType === STT.USER) sentTo = this.request.requester.id;
-      else if (sentToType === STT.GROUPCHAT) sentTo = this.request.channelId ?? '';
-      else throw new Error('sentTo is required');
-    }
-
-    return { template, sentToType, sentTo };
-  }
-
-  async decodeMsg(flowMsg: FlowMsg): Promise<DecodedMsg> {
-    const { template, sentToType, sentTo } = await this.prepareMsg(
-      flowMsg.messageTemplate,
-      flowMsg.sentToType,
-      flowMsg.sentTo,
-    );
-
-    const [formatType, message] = template.render(this.messenger?.type ?? MT.BARE_TEXT);
-
-    this.responses.push({
-      timestamp: new Date(),
-      sentToType,
-      sentTo,
-      templateName: template.constructor.name,
-      templateData: template.toData(),
-      messageType: flowMsg.messageType ?? FMT.ANSWER,
-    });
-
-    return {
-      message_type: flowMsg.messageType ?? null,
-      message: message as string | Record<string, unknown> | unknown[] | null,
-      format_type: formatType,
-      sent_to_type: sentToType,
-      sent_to: sentTo,
-    };
-  }
-
-  async postMsg(flowMsg: FlowMsg): Promise<void> {
-    const messageType = flowMsg.messageType ?? FMT.ANSWER;
-
-    // Check verbose mode
-    if (!_dispatcherConfig.post_msg_verbose && messageType !== FMT.ANSWER && messageType !== FMT.THINK_L1) {
-      logger.info(`Skipped message of type ${messageType} due to non-verbose mode`);
-      return;
-    }
-
-    const { template, sentToType, sentTo } = await this.prepareMsg(
-      flowMsg.messageTemplate,
-      flowMsg.sentToType,
-      flowMsg.sentTo,
-    );
-
-    // Determine reuse tracking ID
-    let reuseTrackingId = flowMsg.reuseTrackingId;
-    if (!reuseTrackingId && THINK_TYPES.includes(messageType)) {
-      for (let i = this.responses.length - 1; i >= 0; i--) {
-        const r = this.responses[i]!;
-        if (THINK_TYPES.includes(r.messageType) && r.trackingId) {
-          reuseTrackingId = r.trackingId;
-          break;
-        }
-      }
-    }
-
-    // Determine revoke tracking IDs
-    const revokeTrackingIds = messageType === FMT.ANSWER
-      ? [...new Set(this.responses.filter((r) => THINK_TYPES.includes(r.messageType) && r.trackingId).map((r) => r.trackingId!))]
-      : [];
-
-    // Send
-    if (this.messenger) {
-      const { trackingId } = await this.messenger.say({
-        messageType,
-        sentToType,
-        sentTo,
-        dispatcher: this,
-        template,
-        reuseTrackingId,
-        revokeTrackingIds,
-      });
-
-      this.responses.push({
-        timestamp: new Date(),
-        sentToType,
-        sentTo,
-        templateName: template.constructor.name,
-        templateData: template.toData(),
-        messageType,
-        trackingId,
-      });
-    }
   }
 
   // ─── Notify Engine Error ───
@@ -455,56 +321,6 @@ export class Dispatcher implements IDispatcher {
     }
   }
 
-  // ─── Archive ───
-
-  async archive(): Promise<void> {
-    if (!this.request || !this.cycleId) return;
-
-    if (
-      this.request.requester.type !== RT.USER &&
-      !_archivableActions.has(this.request.action)
-    ) {
-      logger.info('Skipped cycle archive for non-user requester');
-      return;
-    }
-
-    // Strip media base64 from responses
-    const stripMediaBase64 = (value: unknown): unknown => {
-      if (Array.isArray(value)) return value.map(stripMediaBase64);
-      if (typeof value === 'object' && value !== null) {
-        const obj = value as Record<string, unknown>;
-        const sanitized: Record<string, unknown> = {};
-        for (const [key, item] of Object.entries(obj)) {
-          if (key === 'media_base64') {
-            sanitized[key] = 'archiving_stripped';
-          } else {
-            sanitized[key] = stripMediaBase64(item);
-          }
-        }
-        return sanitized;
-      }
-      return value;
-    };
-
-    const archivedResponses = stripMediaBase64(this.responses.toList()) as unknown[];
-
-    await this.broker.cyclesCreate({
-      cycleId: this.cycleId,
-      requesterType: this.request.requester.type,
-      requesterId: this.request.requester.id,
-      requestSessionId: this.request.sessionId,
-      requestMsg: this.request.msg,
-      requestAction: this.request.action,
-      requestContent: this.request.content.mixedText,
-      requestTime: this.request.timestamp,
-      requestGroupchatId: this.request.channelType === CT.GROUP ? this.request.channelId : null,
-      deviceType: this.request.deviceType,
-      responses: archivedResponses,
-      shownFaqs: this.states.shown_faqs,
-      flowStates: this.states as unknown as Record<string, unknown>,
-    });
-  }
-
   // ─── Click Validation ───
 
   async validateClick(): Promise<[result: boolean, strippedKey: string, cycleId: string | null]> {
@@ -527,7 +343,6 @@ export class Dispatcher implements IDispatcher {
             return [false, key, cycleId];
           }
 
-          // Verify duplicates
           let clicks = (cycleDoc['clicks'] as string[] | null) ?? [];
           const mainKey = key.split('-')[0]!;
 

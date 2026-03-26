@@ -2,7 +2,7 @@ import {
   BaseFlow, Event, flowRegistry, getLogger,
   CoreEventType, EventStatus, FlowMsgType,
 } from '@olow/engine';
-import type { MessengerType, MemorySettings } from '@olow/engine';
+import type { MessengerType } from '@olow/engine';
 import { AppEventType } from '../events.js';
 const logger = getLogger();
 import { TextTemplate } from '@olow/templates';
@@ -27,8 +27,9 @@ export class CommandFlow extends BaseFlow {
       const lang = parts[1]?.toLowerCase();
       if (lang === 'cn' || lang === 'en') {
         // Update settings memory language
-        if ('memory' in this.request.requester) {
-          const mem = await (this.request.requester as { memory: () => Promise<{ settings: MemorySettings; updateSettings: (s: Partial<MemorySettings>) => void }> }).memory();
+        const { requester } = this.request;
+        if ('memory' in requester && requester.memory) {
+          const mem = await requester.memory();
           mem.updateSettings({ info_maps: { ...mem.settings.info_maps, language: lang } });
         }
         this.dispatcher.eventchain.push(new Event(AppEventType.MENU));
@@ -42,9 +43,10 @@ export class CommandFlow extends BaseFlow {
       }
     } else if (cmd === '/proxy') {
       const proxyRtx = parts[1]?.toLowerCase();
-      if (proxyRtx && 'refreshContext' in this.request.requester) {
+      const proxyRequester = this.request.requester;
+      if (proxyRtx && 'refreshContext' in proxyRequester && proxyRequester.refreshContext) {
         const target = proxyRtx === '--remove' ? undefined : proxyRtx;
-        await (this.request.requester as { refreshContext(proxy?: string): Promise<void> }).refreshContext(target);
+        await proxyRequester.refreshContext(target);
         const msg = target
           ? `Context refreshed with proxy: ${target}`
           : 'Proxy removed, context refreshed with own identity';

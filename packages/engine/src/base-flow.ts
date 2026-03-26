@@ -2,6 +2,8 @@ import type { Event } from './events.js';
 import type { Request } from './events.js';
 import type { IBroker } from './broker-interfaces.js';
 import type { EventStatus, MessengerType, FlowStates } from './types.js';
+import type { BaseTool } from './base-tool.js';
+import type { BaseActionChain } from './base-actionchain.js';
 
 // Forward reference to avoid circular dependency
 export interface IDispatcher {
@@ -10,8 +12,8 @@ export interface IDispatcher {
   states: FlowStates;
   eventchain: Event[];
   backgroundTasks: Promise<unknown>[];
-  toolsMap: Map<string, unknown>;
-  actionchainsMap: Map<string, unknown>;
+  toolsMap: Map<string, typeof BaseTool>;
+  actionchainsMap: Map<string, typeof BaseActionChain>;
   validateClick(): Promise<[boolean, string, string | null]>;
   notifyEngineMsg(msg: string, isWarningSilent?: boolean): Promise<void>;
 }

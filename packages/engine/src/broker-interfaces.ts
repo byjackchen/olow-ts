@@ -62,6 +62,22 @@ export interface CycleUpdateParams {
   flowStates?: Record<string, unknown>;
 }
 
+// ═══════════════════ User Context Refresher ═══════════════════
+
+export interface UserContextResult {
+  context: Record<string, unknown> | null;
+  profile: { summary: string; topics: Array<Record<string, unknown>>; tags: string[] } | null;
+}
+
+/**
+ * Pluggable interface for refreshing user context from external sources.
+ * Each project implements this differently (e.g. Workday + ITAware, LDAP, custom HR system).
+ * The engine only depends on this interface — concrete implementations live in app/.
+ */
+export interface IUserContextRefresher {
+  refresh(userId: string, proxyUserId?: string): Promise<UserContextResult>;
+}
+
 // ═══════════════════ Composite IBroker ═══════════════════
 
 export interface IBroker {
@@ -81,12 +97,8 @@ export interface IBroker {
   getPeakShavingCount(): Promise<number>;
   incrementPeakShaving(ttlSeconds?: number): Promise<number>;
 
-  // User context refresh (optional — implemented by app-layer broker)
-  // Fetches external data sources (e.g. Workday context, ITAware profile) in parallel.
-  refreshUserContext?(userId: string, proxyUserId?: string): Promise<{
-    context: Record<string, unknown> | null;
-    profile: { summary: string; topics: Array<Record<string, unknown>>; tags: string[] } | null;
-  }>;
+  // User context refresh (optional — app provides IUserContextRefresher implementation)
+  refreshUserContext?(userId: string, proxyUserId?: string): Promise<UserContextResult>;
 
   // User ID resolution
   getUserId(idType: string, nonStdId: string): Promise<string>;

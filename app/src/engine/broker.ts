@@ -1,19 +1,20 @@
 import { Redis } from 'ioredis';
-import { config, type Config } from '../config/index.js';
-import { getLogger } from '@olow/engine';
-const logger = getLogger();
+import { config } from '../config/index.js';
+import { getLogger, MessengerType as MT, UserIdType as UIT } from '@olow/engine';
+import type { MessengerType, UserIdType, IBroker, ILlmProvider, IMessagingProvider, CycleCreateParams, CycleUpdateParams } from '@olow/engine';
 import * as mongo from '../storage/mongo.js';
 import * as wecomApi from '../services/wecom.api.js';
-import * as openaiApi from '../services/openai.api.js';
-import { callHyaideLlm } from '../services/hyaide.api.js';
-import { getUserRtx } from '../services/slack.api.js';
-import * as itawareApi from '../services/itaware.api.js';
 import * as workdayApi from '../services/workday.api.js';
-import { MessengerType as MT } from '@olow/engine';
-import type { MessengerType, UserIdType, IBroker, ILlmProvider, IMessagingProvider, CycleCreateParams, CycleUpdateParams } from '@olow/engine';
-import { UserIdType as UIT } from '@olow/engine';
+import * as itawareApi from '../services/itaware.api.js';
+import { getUserRtx } from '../services/slack.api.js';
+import { TokenCache } from './token-cache.js';
+import { LlmProvider } from './llm-provider.js';
+import { WeComMessagingProvider } from './wecom-messaging.js';
+import { AppUserContextRefresher } from './user-context.js';
 
-// ─── Broker ───
+const logger = getLogger();
+
+// ─── Broker (composition root) ───
 
 export class Broker implements IBroker {
   private static instance: Broker | null = null;
@@ -21,14 +22,18 @@ export class Broker implements IBroker {
   readonly redis: Redis;
 
   // Token caches
-  private wecomBotToken: string | null = null;
-  private wecomBotTokenExpiry: Date | null = null;
-  private wecomGroupbotToken: string | null = null;
-  private wecomGroupbotTokenExpiry: Date | null = null;
-  private workdayToken: string | null = null;
-  private workdayTokenExpiry: Date | null = null;
-  private itawareToken: string | null = null;
-  private itawareTokenExpiry: Date | null = null;
+  private readonly wecomBotTokenCache: TokenCache;
+  private readonly wecomGroupbotTokenCache: TokenCache;
+  private readonly workdayTokenCache: TokenCache;
+  private readonly itawareTokenCache: TokenCache;
+
+  // Sub-providers
+  private readonly _llm: LlmProvider;
+  private readonly _messaging: WeComMessagingProvider;
+  private readonly _userContext: AppUserContextRefresher;
+
+  // Token rotation
+  private _tokenIndex = 0;
 
   private constructor() {
     this.redis = new Redis({
@@ -38,10 +43,36 @@ export class Broker implements IBroker {
       lazyConnect: true,
       maxRetriesPerRequest: 1,
       retryStrategy(times) {
-        if (times > 3) return null; // Stop retrying
+        if (times > 3) return null;
         return Math.min(times * 200, 2000);
       },
     });
+
+    // Shared helpers for token persistence
+    const getBuffer = (name: string) => this.getSystemTokenBuffer(name);
+    const persist = (name: string, resp: { access_token: string; expires_in: number }) =>
+      this.updateSystemToken(name, resp);
+
+    this.wecomBotTokenCache = new TokenCache(
+      'WeCom_Bot',
+      () => wecomApi.getToken(config.wecom_bot.corp_id, config.wecom_bot.corp_secret),
+      getBuffer, persist,
+    );
+    this.wecomGroupbotTokenCache = new TokenCache(
+      'WeCom_GroupBot',
+      () => wecomApi.getToken(config.wecom_bot.corp_id, config.wecom_bot.corp_secret),
+      getBuffer, persist,
+    );
+    this.workdayTokenCache = new TokenCache(
+      'Workday', () => workdayApi.getAuthToken(), getBuffer, persist,
+    );
+    this.itawareTokenCache = new TokenCache(
+      'ITAware', () => itawareApi.getAuthToken(), getBuffer, persist,
+    );
+
+    this._llm = new LlmProvider(() => this.getRotatedToken());
+    this._messaging = new WeComMessagingProvider(this.wecomBotTokenCache);
+    this._userContext = new AppUserContextRefresher(this.workdayTokenCache, this.itawareTokenCache);
   }
 
   static getInstance(): Broker {
@@ -73,21 +104,11 @@ export class Broker implements IBroker {
   // ─── IBroker Sub-Providers ───
 
   get llm(): ILlmProvider {
-    return {
-      callLlm: (message, opts) => this.callLlm(message, opts),
-      callLlmStream: (message, msgQueue, opts) => this.callLlmStream(message, msgQueue, opts),
-    };
+    return this._llm;
   }
 
   get messaging(): IMessagingProvider {
-    return {
-      sendText: (recipient, message) => this.sendSingleText(recipient, message),
-      sendRichText: (recipient, content) => this.sendSingleRichtext(recipient, content),
-      sendGroupText: (groupId, message) => this.sendGroupText(groupId, message),
-      sendFile: (recipient, mediaId) => this.sendSingleFile(recipient, mediaId),
-      sendImage: (recipient, mediaId) => this.sendSingleImage(recipient, mediaId),
-      createChatGroup: (name, userList) => this.createChatGroup(name, userList),
-    };
+    return this._messaging;
   }
 
   // ─── IBroker Storage Delegates ───
@@ -108,7 +129,7 @@ export class Broker implements IBroker {
     return mongo.upsertSystem(name, data as { token: string; expiretime: Date });
   }
 
-  // ─── Token Management ───
+  // ─── Token Persistence Helpers (used by TokenCache) ───
 
   private async getSystemTokenBuffer(sysName: string): Promise<{ token: string; expiry: Date } | null> {
     const doc = await mongo.getSystem(sysName);
@@ -130,126 +151,7 @@ export class Broker implements IBroker {
     return { token: tokenResponse.access_token, expiry };
   }
 
-  async getWecomBotToken(): Promise<string> {
-    // 1. Memory cache
-    if (this.wecomBotToken && this.wecomBotTokenExpiry && this.wecomBotTokenExpiry > new Date()) {
-      return this.wecomBotToken;
-    }
-    // 2. DB cache
-    const cached = await this.getSystemTokenBuffer('WeCom_Bot');
-    if (cached) {
-      this.wecomBotToken = cached.token;
-      this.wecomBotTokenExpiry = cached.expiry;
-      return cached.token;
-    }
-    // 3. Refresh
-    const resp = await wecomApi.getToken(config.wecom_bot.corp_id, config.wecom_bot.corp_secret);
-    const result = await this.updateSystemToken('WeCom_Bot', resp);
-    this.wecomBotToken = result.token;
-    this.wecomBotTokenExpiry = result.expiry;
-    return result.token;
-  }
-
-  async wecomBotTokenForceRefresh(): Promise<void> {
-    const resp = await wecomApi.getToken(config.wecom_bot.corp_id, config.wecom_bot.corp_secret);
-    const result = await this.updateSystemToken('WeCom_Bot', resp);
-    this.wecomBotToken = result.token;
-    this.wecomBotTokenExpiry = result.expiry;
-  }
-
-  async getWecomGroupbotToken(): Promise<string> {
-    if (this.wecomGroupbotToken && this.wecomGroupbotTokenExpiry && this.wecomGroupbotTokenExpiry > new Date()) {
-      return this.wecomGroupbotToken;
-    }
-    const cached = await this.getSystemTokenBuffer('WeCom_GroupBot');
-    if (cached) {
-      this.wecomGroupbotToken = cached.token;
-      this.wecomGroupbotTokenExpiry = cached.expiry;
-      return cached.token;
-    }
-    // GroupBot uses same corp_id but different config — placeholder for real config
-    const resp = await wecomApi.getToken(config.wecom_bot.corp_id, config.wecom_bot.corp_secret);
-    const result = await this.updateSystemToken('WeCom_GroupBot', resp);
-    this.wecomGroupbotToken = result.token;
-    this.wecomGroupbotTokenExpiry = result.expiry;
-    return result.token;
-  }
-
-  async getWorkdayToken(): Promise<string> {
-    if (this.workdayToken && this.workdayTokenExpiry && this.workdayTokenExpiry > new Date()) {
-      return this.workdayToken;
-    }
-    const cached = await this.getSystemTokenBuffer('Workday');
-    if (cached) {
-      this.workdayToken = cached.token;
-      this.workdayTokenExpiry = cached.expiry;
-      return cached.token;
-    }
-    const resp = await workdayApi.getAuthToken();
-    const result = await this.updateSystemToken('Workday', resp);
-    this.workdayToken = result.token;
-    this.workdayTokenExpiry = result.expiry;
-    return result.token;
-  }
-
-  async getItawareToken(): Promise<string> {
-    if (this.itawareToken && this.itawareTokenExpiry && this.itawareTokenExpiry > new Date()) {
-      return this.itawareToken;
-    }
-    const cached = await this.getSystemTokenBuffer('ITAware');
-    if (cached) {
-      this.itawareToken = cached.token;
-      this.itawareTokenExpiry = cached.expiry;
-      return cached.token;
-    }
-    const resp = await itawareApi.getAuthToken();
-    const result = await this.updateSystemToken('ITAware', resp);
-    this.itawareToken = result.token;
-    this.itawareTokenExpiry = result.expiry;
-    return result.token;
-  }
-
-  // ─── Context + Profile Refresh (IBroker.refreshUserContext) ───
-
-  private async fetchWorkdayContext(userRtx: string, proxyRtx?: string): Promise<Record<string, unknown>> {
-    try {
-      const token = await this.getWorkdayToken();
-      const h = await workdayApi.getContext(token, proxyRtx ?? userRtx);
-      logger.info(`Workday context fetched for ${proxyRtx ?? userRtx}`);
-      return {
-        region: (h['region'] as Record<string, unknown>)?.['descriptor'] ?? '',
-        country: ((h['country'] as string) ?? '').toUpperCase(),
-        location: (h['location'] as Record<string, unknown>)?.['descriptor'] ?? '',
-        department: (h['department'] as Record<string, unknown>)?.['descriptor'] ?? '',
-        job_title: (h['jobTitle'] as Record<string, unknown>)?.['descriptor'] ?? '',
-        worker_type: (h['workerType'] as Record<string, unknown>)?.['descriptor'] ?? '',
-        company: (h['company'] as Record<string, unknown>)?.['descriptor'] ?? '',
-        display_name: h['displayName'] ?? '',
-        first_name: h['firstName'] ?? '',
-        last_name: h['lastName'] ?? '',
-        nhs_group: h['nhs_group'] ?? '',
-      };
-    } catch (err) {
-      logger.warn({ msg: `Workday context fetch failed for ${proxyRtx ?? userRtx}`, err });
-      return {};
-    }
-  }
-
-  private async fetchItawareProfile(userRtx: string): Promise<{ summary: string; topics: Array<Record<string, unknown>>; tags: string[] }> {
-    try {
-      const token = await this.getItawareToken();
-      const profile = await itawareApi.getWorkerProfile(token, userRtx);
-      logger.info(`ITAware profile fetched for ${userRtx}`);
-      return {
-        summary: profile.summary,
-        topics: profile.topics.map((t) => ({ ...t })),
-        tags: profile.tags,
-      };
-    } catch (err) {
-      logger.warn({ msg: `ITAware profile fetch failed for ${userRtx}`, err });
-      return { summary: '', topics: [], tags: [] };
-    }
-  }
+  // ─── Context + Profile Refresh ───
 
   async refreshUserContext(
     userId: string,
@@ -258,102 +160,12 @@ export class Broker implements IBroker {
     context: Record<string, unknown> | null;
     profile: { summary: string; topics: Array<Record<string, unknown>>; tags: string[] } | null;
   }> {
-    const targetRtx = proxyUserId ?? userId;
-    const [context, profile] = await Promise.all([
-      this.fetchWorkdayContext(userId, proxyUserId),
-      this.fetchItawareProfile(targetRtx),
-    ]);
-
-    return {
-      context: Object.keys(context).length > 0 ? context : null,
-      profile: (profile.summary || profile.topics.length > 0 || profile.tags.length > 0) ? profile : null,
-    };
-  }
-
-  // ─── Send Messages (high-level) ───
-
-  private async withTokenRetry(
-    getToken: () => Promise<string>,
-    forceRefresh: () => Promise<void>,
-    fn: (token: string) => Promise<void>,
-  ): Promise<void> {
-    try {
-      const token = await getToken();
-      await fn(token);
-    } catch (err) {
-      if (err instanceof wecomApi.AccessTokenError) {
-        await forceRefresh();
-        const token = await getToken();
-        await fn(token);
-      } else {
-        throw err;
-      }
-    }
-  }
-
-  async sendSingleText(rtx: string, msg: string, messengerType: MessengerType = MT.WECOM_BOT): Promise<void> {
-    if (messengerType === MT.WECOM_BOT) {
-      await this.withTokenRetry(
-        () => this.getWecomBotToken(),
-        () => this.wecomBotTokenForceRefresh(),
-        (token) => wecomApi.sendSingleText(token, rtx, msg),
-      );
-    } else {
-      throw new Error(`sendSingleText not implemented for messenger: ${messengerType}`);
-    }
-  }
-
-  async sendSingleRichtext(rtx: string, msg: string, messengerType: MessengerType = MT.WECOM_BOT): Promise<void> {
-    if (messengerType === MT.WECOM_BOT) {
-      await this.withTokenRetry(
-        () => this.getWecomBotToken(),
-        () => this.wecomBotTokenForceRefresh(),
-        (token) => wecomApi.sendSingleRichtext(token, rtx, msg),
-      );
-    } else {
-      throw new Error(`sendSingleRichtext not implemented for messenger: ${messengerType}`);
-    }
-  }
-
-  async sendGroupText(groupId: string, msg: string, messengerType: MessengerType = MT.WECOM_BOT): Promise<void> {
-    if (messengerType === MT.WECOM_BOT) {
-      const truncated = msg.length > 5117 ? msg.slice(0, 5117) + '\n...(truncated)' : msg;
-      await this.withTokenRetry(
-        () => this.getWecomBotToken(),
-        () => this.wecomBotTokenForceRefresh(),
-        (token) => wecomApi.sendGroupText(token, groupId, truncated),
-      );
-    } else {
-      throw new Error(`sendGroupText not implemented for messenger: ${messengerType}`);
-    }
-  }
-
-  // ─── File Operations ───
-
-  async sendSingleFile(rtx: string, mediaId: string, messengerType: MessengerType = MT.WECOM_BOT): Promise<void> {
-    if (messengerType === MT.WECOM_BOT) {
-      await this.withTokenRetry(
-        () => this.getWecomBotToken(),
-        () => this.wecomBotTokenForceRefresh(),
-        (token) => wecomApi.sendSingleFile(token, rtx, mediaId),
-      );
-    }
-  }
-
-  async sendSingleImage(rtx: string, mediaId: string, messengerType: MessengerType = MT.WECOM_BOT): Promise<void> {
-    if (messengerType === MT.WECOM_BOT) {
-      await this.withTokenRetry(
-        () => this.getWecomBotToken(),
-        () => this.wecomBotTokenForceRefresh(),
-        (token) => wecomApi.sendSingleImage(token, rtx, mediaId),
-      );
-    }
+    return this._userContext.refresh(userId, proxyUserId);
   }
 
   // ─── User ID Resolution ───
 
   async getUserId(userIdType: UserIdType, nonStdUserId: string): Promise<string> {
-    // 1. DB lookup
     if (userIdType === UIT.WECOM) {
       const doc = await mongo.getUserByWecomUserid(nonStdUserId);
       if (doc?.['user']) return doc['user'] as string;
@@ -362,10 +174,9 @@ export class Broker implements IBroker {
       if (doc?.['user']) return doc['user'] as string;
     }
 
-    // 2. Remote service lookup
     let rtx: string;
     if (userIdType === UIT.WECOM) {
-      const token = await this.getWecomBotToken();
+      const token = await this.wecomBotTokenCache.get();
       const resp = await wecomApi.getRtx(token, nonStdUserId);
       rtx = resp.user_list[0]?.['name'] ?? nonStdUserId;
       await mongo.upsertUser(rtx, { wecomUserid: nonStdUserId });
@@ -376,209 +187,6 @@ export class Broker implements IBroker {
       rtx = nonStdUserId;
     }
     return rtx;
-  }
-
-  // ─── Group Management ───
-
-  async createChatGroup(name: string, userList: string[], messengerType: MessengerType = MT.WECOM_BOT): Promise<string> {
-    if (messengerType !== MT.WECOM_BOT) throw new Error(`createChatGroup not implemented for: ${messengerType}`);
-    let groupId: string;
-    try {
-      const token = await this.getWecomBotToken();
-      const resp = await wecomApi.createGroupChat(token, name, userList);
-      groupId = resp.chatid;
-    } catch (err) {
-      if (err instanceof wecomApi.AccessTokenError) {
-        await this.wecomBotTokenForceRefresh();
-        const token = await this.getWecomBotToken();
-        const resp = await wecomApi.createGroupChat(token, name, userList);
-        groupId = resp.chatid;
-      } else throw err;
-    }
-    return groupId;
-  }
-
-  // ─── LLM Calls ───
-
-  async callLlm(
-    message: string,
-    opts?: {
-      jsonMode?: 'string' | 'json' | 'json_fence';
-      provider?: string;
-      model?: string;
-    },
-  ): Promise<[success: boolean, result: string | Record<string, unknown> | null]> {
-    const provider = opts?.provider ?? config.engine.base_llm_provider;
-    const model = opts?.model ?? config.engine.base_llm_model;
-    const jsonMode = opts?.jsonMode ?? 'string';
-
-    let respStr: string;
-
-    if (provider === 'openai') {
-      const resp = await openaiApi.callChatCompletions(message, { model });
-      respStr = resp.choices[0]?.message.content ?? '';
-    } else if (provider === 'hyaide') {
-      const token = this.getRotatedToken();
-      const resp = await callHyaideLlm(token, message, model);
-      respStr = resp.choices[0]?.message.content ?? '';
-    } else {
-      throw new Error(`Unsupported LLM provider: ${provider}`);
-    }
-
-    return this.parseLlmResponse(respStr, jsonMode);
-  }
-
-  async callLlmStream(
-    message: string,
-    msgQueue: { put: (msg: unknown) => Promise<void> },
-    opts?: {
-      jsonMode?: 'string' | 'json' | 'json_fence';
-      provider?: string;
-      model?: string;
-    },
-  ): Promise<[success: boolean, result: string | Record<string, unknown> | null]> {
-    const { StructuralStreamParser, Section } = await import('@olow/engine');
-
-    const provider = opts?.provider ?? config.engine.base_llm_provider;
-    const model = opts?.model ?? config.engine.base_llm_model;
-    const jsonMode = opts?.jsonMode ?? 'string';
-
-    const fullTokens: string[] = [];
-    const parser = new StructuralStreamParser();
-    let lastEmitted: string | null = null;
-
-    const emit = async (msgType: string, delta: string, isComplete: boolean) => {
-      if (!isComplete && lastEmitted && lastEmitted !== msgType) {
-        await msgQueue.put({ messageType: lastEmitted, delta: '', isComplete: true });
-      }
-      lastEmitted = isComplete ? null : msgType;
-      await msgQueue.put({ messageType: msgType, delta, isComplete });
-    };
-
-    // Reasoning field extractor — detects "reasoning": " in streaming JSON
-    // and emits only the value content as think_l3 deltas
-    let contentBuf = '';
-    const REASONING_START = '"thought":';
-    let inReasoning = false;
-    let reasoningQuoteDepth = 0; // track escaped quotes
-
-    const flushContentToken = async (token: string) => {
-      contentBuf += token;
-
-      if (!inReasoning) {
-        // Look for "reasoning": in the buffer
-        const idx = contentBuf.indexOf(REASONING_START);
-        if (idx === -1) return;
-
-        // Found start — skip to the opening quote of the value
-        let rest = contentBuf.slice(idx + REASONING_START.length).trimStart();
-        if (!rest.startsWith('"')) {
-          // Haven't received the opening quote yet, keep buffering
-          return;
-        }
-        rest = rest.slice(1); // skip opening "
-        inReasoning = true;
-        contentBuf = rest;
-      }
-
-      if (inReasoning) {
-        // Stream content until unescaped closing "
-        let i = 0;
-        while (i < contentBuf.length) {
-          if (contentBuf[i] === '\\' && i + 1 < contentBuf.length) {
-            // Escaped char — emit the actual char
-            const escaped = contentBuf[i + 1];
-            const actual = escaped === 'n' ? '\n' : escaped === 't' ? '\t' : (escaped ?? '');
-            await emit('think_l3', actual, false);
-            i += 2;
-          } else if (contentBuf[i] === '"') {
-            // End of reasoning value
-            inReasoning = false;
-            await emit('think_l3', '', true);
-            contentBuf = '';
-            return;
-          } else {
-            await emit('think_l3', contentBuf[i]!, false);
-            i++;
-          }
-        }
-        contentBuf = ''; // all consumed
-      }
-    };
-
-    let streamGen: AsyncGenerator<[type: 'reasoning' | 'content' | 'done', token: string]>;
-    if (provider === 'openai') {
-      streamGen = openaiApi.streamChatCompletions(message, { model });
-    } else if (provider === 'hyaide') {
-      const token = this.getRotatedToken();
-      const { streamHyaideLlm } = await import('../services/hyaide.api.js');
-      streamGen = streamHyaideLlm(token, message, model);
-    } else {
-      throw new Error(`Streaming not implemented for provider: ${provider}`);
-    }
-
-    for await (const [type, token] of streamGen) {
-      if (type === 'done') {
-        if (lastEmitted) {
-          await emit(lastEmitted, '', true);
-        }
-        break;
-      }
-
-      if (type === 'reasoning') {
-        // DeepSeek thinking tokens → think_l2
-        await emit('think_l2', token, false);
-        continue;
-      }
-
-      if (type === 'content') {
-        fullTokens.push(token);
-
-        // Also run through structural parser for <think> tags
-        const results = parser.feed(token);
-        let hasStructural = false;
-        for (const [section, text] of results) {
-          if (section === Section.THINK_L3) {
-            hasStructural = true;
-            await emit('think_l3', text, false);
-          } else if (section === Section.ANSWER) {
-            // For answer section: extract reasoning field, suppress the rest
-            await flushContentToken(text);
-          }
-          // ACTION/RAW sections: silently suppressed
-        }
-        if (!hasStructural && results.length === 0) {
-          await flushContentToken(token);
-        }
-      }
-    }
-
-    const fullText = fullTokens.join('');
-    return this.parseLlmResponse(fullText, jsonMode);
-  }
-
-  private parseLlmResponse(
-    text: string,
-    jsonMode: 'string' | 'json' | 'json_fence',
-  ): [boolean, string | Record<string, unknown> | null] {
-    if (jsonMode === 'string') {
-      return [true, text];
-    }
-
-    let candidate = text;
-    if (jsonMode === 'json_fence') {
-      const fencePattern = /```(?:json|jsonc)?\s*([\[{](?:(?!```)[\s\S])*?[}\]])\s*```/i;
-      const match = fencePattern.exec(text);
-      candidate = match?.[1] ?? text;
-    }
-
-    try {
-      const parsed = JSON.parse(candidate) as Record<string, unknown>;
-      return [true, parsed];
-    } catch {
-      logger.error({ msg: 'Failed to parse JSON from LLM response', text: candidate.slice(0, 200) });
-      return [false, null];
-    }
   }
 
   // ─── MongoDB Wrappers ───
@@ -612,24 +220,11 @@ export class Broker implements IBroker {
     return count;
   }
 
-  // ─── Token Rotation (Redis) ───
+  // ─── Token Rotation ───
 
-  getRotatedToken(): string {
+  private getRotatedToken(): string {
     const tokens = config.hyaide.llm_tokens;
     if (tokens.length === 0) throw new Error('No Hyaide LLM tokens configured');
-
-    // Synchronous rotation via Redis (fire-and-forget for increment)
-    const key = config.redis.keys.taiji_rotation;
-    let index = 0;
-    try {
-      // We use a simple counter approach
-      const current = this.redis.get(key);
-      // Since Redis ops are async but we need sync, use a rotating counter
-      index = Math.floor(Math.random() * tokens.length);
-    } catch {
-      index = 0;
-    }
-
-    return tokens[index % tokens.length] ?? tokens[0]!;
+    return tokens[this._tokenIndex++ % tokens.length]!;
   }
 }

@@ -23,6 +23,7 @@ import { ContentBlocks, determineActionType } from './content-blocks.js';
 import type { IBroker } from './broker-interfaces.js';
 import type { IMessenger } from './messengers.js';
 import type { ITemplate } from './base-template.js';
+import type { BaseFlow } from './base-flow.js';
 
 // ─── Pluggable Routing ───
 
@@ -38,6 +39,11 @@ export function registerSystemActionParser(parser: SystemActionParser): void {
 
 export function registerEventRouter(router: EventRouter): void {
   _eventRouters.push(router);
+}
+
+export function resetRouting(): void {
+  _systemParsers.length = 0;
+  _eventRouters.length = 0;
 }
 
 // ─── System Requester ───
@@ -56,6 +62,11 @@ export class SystemRequester {
 export interface IUser {
   readonly type: typeof RT.USER;
   readonly id: string;
+  memory?(): Promise<import('./memory/index.js').Memory>;
+  context?(): Promise<Record<string, unknown>>;
+  vip?(): Promise<Record<string, unknown>>;
+  refreshContext?(proxyUserId?: string): Promise<void>;
+  memoryLoaded?: boolean;
 }
 
 // ─── FlowMsg ───
@@ -105,7 +116,7 @@ export class ResponseChain extends Array<UniversalResponse> {
 export class Event {
   type: EventType;
   status: EventStatus;
-  flow: unknown | null = null; // Will be BaseFlow
+  flow: BaseFlow | null = null;
   dependencies: Event[];
   msgQueue: MessageQueue<FlowMsg | StreamDeltaFlowMsg> | null = null;
 
@@ -115,7 +126,7 @@ export class Event {
     this.dependencies = dependencies;
   }
 
-  bindFlow(flow: unknown): void {
+  bindFlow(flow: BaseFlow): void {
     this.flow = flow;
   }
 

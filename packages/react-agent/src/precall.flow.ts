@@ -18,8 +18,8 @@ export class ReactPrecallFlow extends BaseFlow {
 
     // Retrieve user persona from ContextGraph USER_PROFILE nodes
     try {
-      if ('memory' in this.request.requester) {
-        const requester = this.request.requester as { memory(): Promise<{ graph: { nodes: Array<{ type: string; text: string; category?: string; metadata?: Record<string, unknown> }> } }> };
+      const { requester } = this.request;
+      if ('memory' in requester && requester.memory) {
         const mem = await requester.memory();
         const entries = recallProfile(mem.graph as Parameters<typeof recallProfile>[0]);
         const persona: { summary: string; topics: Array<Record<string, unknown>>; tags: string[] } = {

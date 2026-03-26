@@ -13,6 +13,7 @@ import { MessengerType as MT } from './types.js';
 import { ContentBlocks, determineActionType } from './content-blocks.js';
 import type { ITemplate } from './base-template.js';
 import type { IUser } from './events.js';
+import type { IDispatcher } from './base-flow.js';
 import { User } from './user.js';
 
 // ─── Request Init Result ───
@@ -51,7 +52,7 @@ export interface IMessenger {
     messageType: FlowMsgType;
     sentToType: SentToType;
     sentTo: string;
-    dispatcher: unknown;
+    dispatcher: IDispatcher;
     template: ITemplate;
     reuseTrackingId?: string;
     revokeTrackingIds?: string[];
@@ -125,7 +126,7 @@ class WebBotMessenger implements IMessenger {
     messageType: FlowMsgType;
     sentToType: SentToType;
     sentTo: string;
-    dispatcher: unknown;
+    dispatcher: IDispatcher;
     template: ITemplate;
     reuseTrackingId?: string;
     revokeTrackingIds?: string[];
@@ -168,7 +169,7 @@ class StubMessenger implements IMessenger {
     messageType: FlowMsgType;
     sentToType: SentToType;
     sentTo: string;
-    dispatcher: unknown;
+    dispatcher: IDispatcher;
     template: ITemplate;
   }): Promise<SayResult> {
     const [msgType, message] = opts.template.render(this.type);

@@ -18,7 +18,6 @@
   "dependencies": {
     "@olow/engine": "*",
     "@olow/react-agent": "*",
-    "@olow/navigate-agent": "*",
     "@olow/templates": "*",
     "fastify": "^5.3.3",
     "zod": "^3.25.67",

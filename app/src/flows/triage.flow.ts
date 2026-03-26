@@ -1,6 +1,6 @@
 import {
   BaseFlow, Event, Request, flowRegistry, getLogger,
-  CoreEventType, EventStatus, ActionType, FlowMsgType, Memory,
+  CoreEventType, EventStatus, ActionType, FlowMsgType,
 } from '@olow/engine';
 import type { MessengerType } from '@olow/engine';
 import { AppEventType } from '../events.js';
@@ -64,7 +64,8 @@ export class TriageFlow extends BaseFlow {
   }
 
   async run(): Promise<EventStatus> {
-    const userId = this.request.requester.id;
+    const { requester } = this.request;
+    const userId = requester.id;
     logger.info(`TriageFlow for user ${userId}, action=${this.request.action}`);
 
     // 1. Peak shaving check
@@ -81,9 +82,9 @@ export class TriageFlow extends BaseFlow {
       this.request.language = detectedLang;
 
       // Update user settings memory with language
-      if ('memory' in this.request.requester) {
+      if ('memory' in requester && requester.memory) {
         try {
-          const memory = await (this.request.requester as { memory: () => Promise<Memory> }).memory();
+          const memory = await requester.memory();
           memory.updateSettings({ info_maps: { ...memory.settings.info_maps, language: detectedLang } });
         } catch {
           // Non-fatal
@@ -92,9 +93,9 @@ export class TriageFlow extends BaseFlow {
     }
 
     // 3. Check for active ActionChain in memory
-    if ('memory' in this.request.requester) {
+    if ('memory' in requester && requester.memory) {
       try {
-        const memory = await (this.request.requester as { memory: () => Promise<Memory> }).memory();
+        const memory = await requester.memory();
 
         if (memory.actionchain) {
           // Route to active action chain

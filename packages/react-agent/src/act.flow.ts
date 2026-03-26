@@ -26,7 +26,7 @@ export class ReactActFlow extends BaseFlow {
       return EventStatus.COMPLETE;
     }
 
-    const ToolClass = this.dispatcher.toolsMap.get(actionName) as (typeof BaseTool) | undefined;
+    const ToolClass = this.dispatcher.toolsMap.get(actionName);
     if (!ToolClass) {
       logger.error(`Tool not found: ${actionName}`);
       processChain.push({ type: 'observation', success: false, error: `Tool "${actionName}" is not available` });

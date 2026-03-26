@@ -7,7 +7,7 @@ export { OlowEngine, OlowEngineInstance, type MessengerFactory } from './olow.js
 export { Dispatcher, setDispatcherConfig, type DispatcherEngineConfig } from './dispatcher.js';
 export {
   Event, EventChain, Request, ResponseChain, SystemRequester,
-  registerSystemActionParser, registerEventRouter,
+  registerSystemActionParser, registerEventRouter, resetRouting,
   type FlowMsg, type StreamDeltaFlowMsg, type UniversalResponse, type IUser,
   type SystemActionParser, type EventRouter,
 } from './events.js';
@@ -23,11 +23,12 @@ export type { ITemplate } from './base-template.js';
 
 // Broker Interfaces
 export type {
-  IBroker, ILlmProvider, IMessagingProvider, LlmCallOpts,
-  CycleCreateParams, CycleUpdateParams,
+  IBroker, ILlmProvider, IMessagingProvider, IUserContextRefresher,
+  LlmCallOpts, UserContextResult, CycleCreateParams, CycleUpdateParams,
 } from './broker-interfaces.js';
 
 // Messenger Interface
+export { createMessenger } from './messengers.js';
 export type { IMessenger, RequestInitResult, SayResult } from './messengers.js';
 
 // Types (all const-enums and Zod schemas)
@@ -77,7 +78,6 @@ export { matchTools } from './tool-matcher.js';
 // Kits (utilities)
 export * as promptKit from './prompt.kit.js';
 export { StructuralStreamParser, Section } from './stream-parser.js';
-export { textAtom, linkAtom, atAtom, buildRichtext, truncateForWecom, type RichtextAtom } from './format.kit.js';
 export { xmlToDict, deepMerge, dedup, truncate, bytesLength } from './logic.kit.js';
 
 // MCP

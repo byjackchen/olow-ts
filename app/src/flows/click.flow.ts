@@ -74,10 +74,11 @@ export class ClickFlow extends BaseFlow {
     // Settings (language, etc.) — e.g. settings-language-cn
     if (key.startsWith('settings-')) {
       const parts = key.split('-');
-      if (parts.length >= 3 && parts[1] === 'language' && 'memory' in this.request.requester) {
+      const { requester } = this.request;
+      if (parts.length >= 3 && parts[1] === 'language' && 'memory' in requester && requester.memory) {
         const lang = parts.slice(2).join('-');
         try {
-          const mem = await (this.request.requester as { memory(): Promise<{ settings: { info_maps: Record<string, unknown> }; updateSettings: (s: unknown) => void }> }).memory();
+          const mem = await requester.memory();
           mem.updateSettings({ info_maps: { ...mem.settings.info_maps, language: lang } });
         } catch { /* non-fatal */ }
       }
