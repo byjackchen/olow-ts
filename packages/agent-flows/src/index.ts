@@ -21,4 +21,4 @@ export { ReactResponseFlow } from './response.flow.js';
 
 // Agent Flows
 export { OcrFlow } from './ocr.flow.js';
-export { ReactNavigateFlow, AiNavigateTemplate } from './navigate.flow.js';
+export { ReactNavigateFlow, AiNavigateTemplate, setNavItems, getNavItems, type NavItem } from './navigate.flow.js';
