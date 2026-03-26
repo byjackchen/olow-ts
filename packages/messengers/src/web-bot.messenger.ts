@@ -1,5 +1,5 @@
 import {
-  MessengerType as MT, ContentBlocks, determineActionType, User,
+  MessengerType as MT, ContentBlocks, determineActionType, User, messengerRegistry,
 } from '@olow/engine';
 import type {
   IBroker, MessengerType, RequesterType, FlowMsgType, SentToType,
@@ -7,6 +7,7 @@ import type {
 } from '@olow/engine';
 import { resolveSessionId } from './utils.js';
 
+@messengerRegistry.register({ name: MT.WEB_BOT })
 export class WebBotMessenger implements IMessenger {
   readonly type = MT.WEB_BOT;
   readonly supportsStreaming = true;

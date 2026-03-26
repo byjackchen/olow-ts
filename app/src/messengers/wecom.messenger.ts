@@ -1,13 +1,20 @@
 import {
   MessengerType as MT, ContentBlocks, determineActionType, User,
-  SentToType as STT, MsgType,
+  SentToType as STT, MsgType, messengerRegistry,
 } from '@olow/engine';
 import type {
   IBroker, MessengerType, RequesterType, FlowMsgType, SentToType,
-  ChannelType, SiteName, IMessenger, RequestInitResult, SayResult, ITemplate, IDispatcher,
+  ChannelType, IMessenger, RequestInitResult, SayResult, ITemplate, IDispatcher,
 } from '@olow/engine';
-import { resolveSessionId } from './utils.js';
 
+function resolveSessionId(msg: Record<string, unknown>, channelType: ChannelType | null): string {
+  if (channelType === 'group') return 'default';
+  const sid = msg['SessionId'];
+  if (typeof sid === 'string' && sid.trim()) return sid.trim();
+  return 'default';
+}
+
+@messengerRegistry.register({ name: MT.WECOM_BOT })
 export class WeComMessenger implements IMessenger {
   readonly type: MessengerType;
   readonly supportsStreaming = false;
@@ -67,6 +74,7 @@ export class WeComMessenger implements IMessenger {
   }
 }
 
+@messengerRegistry.register({ name: MT.WECOM_GROUPBOT })
 export class WeComGroupBotMessenger extends WeComMessenger {
   constructor() {
     super(MT.WECOM_GROUPBOT);

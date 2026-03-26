@@ -13,7 +13,7 @@ export {
 } from './events.js';
 
 // Registry
-export { ModuleRegistry, flowRegistry, toolRegistry, actionchainRegistry } from './registry.js';
+export { ModuleRegistry, flowRegistry, toolRegistry, actionchainRegistry, messengerRegistry } from './registry.js';
 
 // Base Classes
 export { BaseFlow, type IDispatcher } from './base-flow.js';

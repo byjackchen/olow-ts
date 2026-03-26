@@ -7,9 +7,10 @@ import {
   ResponseMode, MessengerType, RequesterType, SystemName,
   type BotEngineStreamOutput,
 } from '@olow/engine';
-import { createMessenger } from '@olow/messengers';
+import { Messenger } from '@olow/messengers';
 import { Broker } from './engine/broker.js';
 import { setReactAgentConfig } from '@olow/react-agent';
+import './messengers/wecom.messenger.js'; // registers WeComMessenger + WeComGroupBotMessenger
 import './events.js'; // registers system action parsers and event routers
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -28,7 +29,7 @@ async function start(): Promise<void> {
   const engine = await OlowEngine.create()
     .withConfig(config.engine)
     .withBroker(Broker.getInstance())
-    .withMessengerFactory(createMessenger)
+    .withMessengerFactory(Messenger.create)
     .addFlowDir(join(__dirname, 'flows'))
     .addToolDir(join(__dirname, 'tools'))
     .addActionChainDir(join(__dirname, 'actionchains'))

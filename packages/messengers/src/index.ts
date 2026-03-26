@@ -1,11 +1,10 @@
 // ═══════════════════ @olow/messengers — Public API ═══════════════════
 
 // Factory
-export { createMessenger } from './factory.js';
+export { Messenger } from './factory.js';
 
 // Messenger implementations
 export { WebBotMessenger } from './web-bot.messenger.js';
-export { WeComMessenger, WeComGroupBotMessenger } from './wecom.messenger.js';
 export { StubMessenger } from './stub.messenger.js';
 
 // Templates

@@ -74,3 +74,4 @@ export class ModuleRegistry {
 export const flowRegistry = new ModuleRegistry();
 export const toolRegistry = new ModuleRegistry();
 export const actionchainRegistry = new ModuleRegistry();
+export const messengerRegistry = new ModuleRegistry();
