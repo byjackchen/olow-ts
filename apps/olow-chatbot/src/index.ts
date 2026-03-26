@@ -10,6 +10,7 @@ import {
 import { Broker } from './engine/broker.js';
 import { MessagingProvider } from './engine/messaging.provider.js';
 import { setReactAgentConfig } from '@olow/agent-flows';
+import '@olow/messengers'; // registers WebBotMessenger + StubMessenger
 import './events.js'; // registers system action parsers and event routers
 
 const __dirname = dirname(fileURLToPath(import.meta.url));

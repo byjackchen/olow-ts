@@ -49,6 +49,7 @@ export class ReactPrecallFlow extends BaseFlow {
 
     // Chain REACT_NAVIGATE in parallel (for web portal sites)
     if (this.request.site) {
+      // Navigation items should be provided by app (e.g., fetched from API and set in states)
       this.dispatcher.eventchain.push(new Event(ReactEventType.REACT_NAVIGATE));
     }
 
