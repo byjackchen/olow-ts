@@ -1,7 +1,7 @@
 {
-  "name": "o-chatbot",
+  "name": "olow-chatbot",
   "version": "1.0.0",
-  "description": "O-Chatbot application",
+  "description": "Olow chatbot application",
   "type": "module",
   "engines": {
     "node": ">=22.0.0"

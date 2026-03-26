@@ -1,14 +1,19 @@
+name: olow-ts-chatbot
+
 services:
-  o-chatbot:
+  chatbot:
     build:
       context: ../..
-      dockerfile: apps/o-chatbot/Dockerfile
+      dockerfile: apps/olow-chatbot/Dockerfile
     ports:
       - "3070:3000"
     env_file:
-      - .env
+      - ../../.env
+    environment:
+      - MONGO_HOST=mongo
+      - REDIS_HOST=redis
     volumes:
-      - ./config:/app/apps/o-chatbot/config:ro
+      - ./config:/app/apps/olow-chatbot/config:ro
     depends_on:
       mongo:
         condition: service_started
@@ -19,14 +24,14 @@ services:
   mongo:
     image: mongo:7
     ports:
-      - "27017:27017"
+      - "27020:27017"
     volumes:
       - mongo-data:/data/db
 
   redis:
     image: redis:7-alpine
     ports:
-      - "6379:6379"
+      - "6381:6379"
     volumes:
       - redis-data:/data
 

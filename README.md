@@ -68,7 +68,7 @@ olow-ts/
 │   ├── messengers/       @olow/messengers       Messenger impls + templates + i18n
 │   └── react-agent/      @olow/react-agent      ReAct reasoning agent (5-flow pipeline)
 │
-├── apps/o-chatbot/                  olow-app               Reference application
+├── apps/olow-chatbot/                  olow-app               Reference application
 │   └── src/
 │       ├── index.ts                 Bootstrap & Fastify routes
 │       ├── config/                  YAML + .env config loading
@@ -160,7 +160,7 @@ class Messenger {
 **4. Pluggable routing (side-effect registration)**
 
 ```typescript
-// apps/o-chatbot/src/events.ts — registered on import
+// apps/olow-chatbot/src/events.ts — registered on import
 registerSystemActionParser((msg) => { ... });
 registerEventRouter((action, msg, channelType) => { ... });
 ```
@@ -177,10 +177,10 @@ registerEventRouter((action, msg, channelType) => { ... });
    ├── Memory config + storage binding
    ├── Broker.initialize()     (Redis connect, MongoDB connect)
    ├── Module discovery        (scan dirs → import → decorators fire → registry populated)
-   │   ├── flowRegistry        ← apps/o-chatbot/src/flows/*.ts
-   │   ├── toolRegistry        ← apps/o-chatbot/src/tools/*.ts
-   │   ├── actionchainRegistry ← apps/o-chatbot/src/actionchains/*.ts
-   │   └── messengerRegistry   ← apps/o-chatbot/src/messengers/*.ts + @olow/messengers (WebBot)
+   │   ├── flowRegistry        ← apps/olow-chatbot/src/flows/*.ts
+   │   ├── toolRegistry        ← apps/olow-chatbot/src/tools/*.ts
+   │   ├── actionchainRegistry ← apps/olow-chatbot/src/actionchains/*.ts
+   │   └── messengerRegistry   ← apps/olow-chatbot/src/messengers/*.ts + @olow/messengers (WebBot)
    └── MCP proxy (if configured)
 5. Fastify routes bound
 6. Server listening
@@ -279,7 +279,7 @@ export class MyTool extends BaseTool {
 ### Adding a Custom Messenger
 
 ```typescript
-// apps/o-chatbot/src/messengers/slack.messenger.ts
+// apps/olow-chatbot/src/messengers/slack.messenger.ts
 import { messengerRegistry, MessengerType as MT } from '@olow/engine';
 import type { IMessenger } from '@olow/engine';
 
@@ -333,16 +333,80 @@ class MyBroker implements IBroker {
 npm install
 npm run build
 cp .env.example .env   # configure API keys
+```
 
-# Docker
+## Docker
+
+Each app in `apps/` has its own `Dockerfile` + `docker-compose.yml` and runs independently.
+
+### Build & Run (olow-chatbot)
+
+```bash
+cd apps/olow-chatbot
+
+# Build and start (chatbot + mongo + redis)
 docker compose up --build -d
 
-# Test
+# View logs
+docker compose logs chatbot -f
+```
+
+### Rebuild (clean)
+
+```bash
+cd apps/olow-chatbot
+
+# Stop and remove containers
+docker compose down
+
+# Remove old images to force full rebuild
+docker rmi olow-ts-chatbot-chatbot
+
+# Rebuild and start
+docker compose up --build -d
+```
+
+### Full Reset (including data)
+
+```bash
+cd apps/olow-chatbot
+
+# Stop, remove containers + volumes (MongoDB data, Redis data)
+docker compose down -v
+
+# Remove image
+docker rmi olow-ts-chatbot-chatbot
+
+# Fresh start
+docker compose up --build -d
+```
+
+### Test
+
+```bash
+# Stream mode (SSE)
 curl -N -X POST 'http://localhost:3070/web_bot?mode=stream' \
   -H 'Authorization: Bearer <token>' \
   -H 'Content-Type: application/json' \
-  -d '{"UserId":"test","content":"hello","action":"enter_chat"}'
+  -d '{"UserId":"test","content":"hello"}'
+
+# POST mode
+curl -X POST 'http://localhost:3070/web_bot?mode=post' \
+  -H 'Authorization: Bearer <token>' \
+  -H 'Content-Type: application/json' \
+  -d '{"UserId":"test","content":"what is the wifi password?"}'
+
+# Health check
+curl -H 'Authorization: Bearer <token>' http://localhost:3070/engine/status
 ```
+
+### Port Mapping
+
+| Service | Internal | External |
+|---------|----------|----------|
+| chatbot | 3000 | 3070 |
+| mongo | 27017 | 27020 |
+| redis | 6379 | 6381 |
 
 ## License
 
