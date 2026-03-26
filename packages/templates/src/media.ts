@@ -1,6 +1,7 @@
-import { MsgType } from '@olow/engine';
+import { MsgType, templateRegistry } from '@olow/engine';
 import type { MessengerType, Language, ITemplate } from '@olow/engine';
 
+@templateRegistry.register({ name: 'SingleMediaTemplate' })
 export class SingleMediaTemplate implements ITemplate {
   lang?: Language;
   private mediaType: typeof MsgType.FILE | typeof MsgType.IMAGE;

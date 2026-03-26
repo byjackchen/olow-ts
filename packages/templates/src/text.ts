@@ -1,6 +1,7 @@
-import { MsgType } from '@olow/engine';
+import { MsgType, templateRegistry } from '@olow/engine';
 import type { MessengerType, Language, ITemplate } from '@olow/engine';
 
+@templateRegistry.register({ name: 'TextTemplate' })
 export class TextTemplate implements ITemplate {
   lang?: Language;
   private textList: Array<string | ((lang?: Language) => string)>;
@@ -25,6 +26,7 @@ export class TextTemplate implements ITemplate {
   }
 }
 
+@templateRegistry.register({ name: 'AgentSupportConfirmTemplate' })
 export class AgentSupportConfirmTemplate implements ITemplate {
   lang?: Language;
 

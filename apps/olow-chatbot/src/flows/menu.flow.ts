@@ -5,7 +5,7 @@ import {
 import type { Event, MessengerType } from '@olow/engine';
 import { AppEventType } from '../events.js';
 const logger = getLogger();
-import { TextTemplate, I18n } from '@olow/messengers';
+import { TextTemplate, I18n } from '@olow/templates';
 
 @flowRegistry.register()
 export class MenuFlow extends BaseFlow {

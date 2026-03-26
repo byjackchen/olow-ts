@@ -5,7 +5,7 @@ import {
 } from '@olow/engine';
 import { BaseTool, toolRegistry } from '@olow/engine';
 import type { Event, ToolResult } from '@olow/engine';
-import { GuestWifiTemplate, SingleMediaTemplate } from '@olow/messengers';
+import { Templates } from '@olow/templates';
 import { MsgType } from '@olow/engine';
 import * as servicenow from '../services/servicenow.api.js';
 import type { GuestWifiInfo } from '../services/servicenow.api.js';
@@ -69,7 +69,7 @@ export class GuestWifiActionChain extends BaseActionChain {
     // Send WiFi info
     const cycleId = (this.dispatcher as { cycleId?: string }).cycleId ?? '';
     await this.event.propagateMsg(
-      new GuestWifiTemplate({
+      Templates.create('GuestWifiTemplate', {
         ssid: info.ssid,
         password: info.password,
         expired_date: info.expired_date,
@@ -82,7 +82,7 @@ export class GuestWifiActionChain extends BaseActionChain {
     // Generate and send QR code
     const qrBase64 = generateWifiQrSvg(info.ssid, info.password, info.expired_date);
     await this.event.propagateMsg(
-      new SingleMediaTemplate({
+      Templates.create('SingleMediaTemplate', {
         mediaType: MsgType.IMAGE,
         mediaName: 'guest_wifi_qrcode.svg',
         mediaBase64: qrBase64,

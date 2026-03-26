@@ -1,5 +1,5 @@
 import type { ITemplate, Language } from '@olow/engine';
-import { AiIdleTemplate, AiReActAnswerTemplate, TextTemplate, I18n, type Recommendation } from '@olow/messengers';
+import { AiIdleTemplate, AiReActAnswerTemplate, TextTemplate, I18n, type Recommendation } from '@olow/templates';
 
 export interface IReactTemplateProvider {
   idle(text: string): ITemplate;

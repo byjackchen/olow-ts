@@ -1,6 +1,6 @@
-import { MsgType } from '@olow/engine';
+import { MsgType, templateRegistry } from '@olow/engine';
 import type { MessengerType, Language, ITemplate } from '@olow/engine';
-import { i18n } from './i18n.js';
+import { i18n } from '@olow/templates';
 
 const GUEST_WIFI_TITLE = i18n({
   en: '🌐 Guest WiFi Access',
@@ -12,6 +12,7 @@ const GUEST_WIFI_BODY = i18n({
   cn: 'SSID: {ssid}\n密码: {password}\n到期时间: {expired_date}\n\n请使用以上信息连接访客 WiFi。',
 });
 
+@templateRegistry.register({ name: 'GuestWifiTemplate' })
 export class GuestWifiTemplate implements ITemplate {
   lang?: Language;
   private ssid: string;

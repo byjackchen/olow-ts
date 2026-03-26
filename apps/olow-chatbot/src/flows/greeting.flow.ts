@@ -5,7 +5,7 @@ import {
 import type { MessengerType } from '@olow/engine';
 import { AppEventType } from '../events.js';
 const logger = getLogger();
-import { TextTemplate, I18n } from '@olow/messengers';
+import { TextTemplate, I18n } from '@olow/templates';
 import * as mongo from '../storage/mongo.js';
 import { config } from '../config/index.js';
 

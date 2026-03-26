@@ -37,6 +37,7 @@ async function start(): Promise<void> {
     .addToolDir(join(__dirname, 'tools'))
     .addActionChainDir(join(__dirname, 'actionchains'))
     .addMessengerDir(join(__dirname, 'messengers'))
+    .addTemplateDir(join(__dirname, 'templates'))
     .initialize();
 
   const logger = getLogger();

@@ -1,6 +1,7 @@
-import { MsgType, MessengerType as MT } from '@olow/engine';
+import { MsgType, MessengerType as MT, templateRegistry } from '@olow/engine';
 import type { MessengerType, Language, ITemplate } from '@olow/engine';
 
+@templateRegistry.register({ name: 'AiIdleTemplate' })
 export class AiIdleTemplate implements ITemplate {
   lang?: Language;
   private textParts: Array<string | ((lang?: Language) => string)>;
@@ -31,6 +32,7 @@ export interface Recommendation {
   buttonKey?: string;
 }
 
+@templateRegistry.register({ name: 'AiReActAnswerTemplate' })
 export class AiReActAnswerTemplate implements ITemplate {
   lang?: Language;
   private cycleId: string;
@@ -45,10 +47,8 @@ export class AiReActAnswerTemplate implements ITemplate {
   }
 
   render(messengerType: MessengerType): [MsgType, unknown] {
-    // Build response parts
     const parts: string[] = [this.text];
 
-    // Recommendations
     if (this.recommendations.length > 0) {
       parts.push('\n\n📋 Related:');
       for (const rec of this.recommendations) {
@@ -63,7 +63,6 @@ export class AiReActAnswerTemplate implements ITemplate {
     const fullText = parts.join('\n');
 
     if (messengerType === MT.SLACK_BOT) {
-      // Return Slack blocks structure
       const blocks: unknown[] = [
         { type: 'section', text: { type: 'mrkdwn', text: fullText } },
         { type: 'actions', elements: [
@@ -74,16 +73,10 @@ export class AiReActAnswerTemplate implements ITemplate {
       return [MsgType.SLACK_BLOCKS, blocks];
     }
 
-    // Default: plain text with button hints
     return [MsgType.TEXT, fullText];
   }
 
   toData(): Record<string, unknown> {
-    return {
-      cycleId: this.cycleId,
-      text: this.text,
-      recommendations: this.recommendations,
-      lang: this.lang,
-    };
+    return { cycleId: this.cycleId, text: this.text, recommendations: this.recommendations, lang: this.lang };
   }
 }

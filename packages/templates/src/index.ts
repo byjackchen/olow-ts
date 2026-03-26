@@ -1,10 +1,12 @@
-// @olow/templates — Shared template components and i18n
+// ═══════════════════ @olow/templates — Public API ═══════════════════
 
-// Templates
+// Factory
+export { Templates } from './factory.js';
+
+// Template implementations (auto-register via @templateRegistry.register() on import)
 export { TextTemplate, AgentSupportConfirmTemplate } from './text.js';
 export { AiIdleTemplate, AiReActAnswerTemplate, type Recommendation } from './ai.js';
 export { BackToMenuFooter } from './footer.js';
-export { GuestWifiTemplate } from './guest-wifi.js';
 export { SingleMediaTemplate } from './media.js';
 
 // I18n

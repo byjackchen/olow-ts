@@ -5,7 +5,7 @@ import {
 import type { MessengerType } from '@olow/engine';
 import { AppEventType } from '../events.js';
 const logger = getLogger();
-import { TextTemplate } from '@olow/messengers';
+import { TextTemplate } from '@olow/templates';
 
 @flowRegistry.register()
 export class CommandFlow extends BaseFlow {

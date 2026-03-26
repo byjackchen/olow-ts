@@ -1,6 +1,7 @@
-import { MsgType } from '@olow/engine';
+import { MsgType, templateRegistry } from '@olow/engine';
 import type { MessengerType, Language, ITemplate } from '@olow/engine';
 
+@templateRegistry.register({ name: 'BackToMenuFooter' })
 export class BackToMenuFooter implements ITemplate {
   lang?: Language;
   private textList: Array<string | ((lang?: Language) => string)>;
