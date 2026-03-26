@@ -59,6 +59,7 @@ export class WeComMessenger implements IMessenger {
   }): Promise<SayResult> {
     const [msgType, message] = opts.template.render(this.type);
     const messaging = opts.dispatcher.broker.messaging;
+    if (!messaging) throw new Error('IMessagingProvider not configured on broker');
 
     if (typeof message === 'string' && message.trim()) {
       if (opts.sentToType === STT.GROUPCHAT) {
@@ -71,12 +72,5 @@ export class WeComMessenger implements IMessenger {
     }
 
     return { msgType, message, trackingId: '' };
-  }
-}
-
-@messengerRegistry.register({ name: MT.WECOM_GROUPBOT })
-export class WeComGroupBotMessenger extends WeComMessenger {
-  constructor() {
-    super(MT.WECOM_GROUPBOT);
   }
 }

@@ -1,16 +1,15 @@
 import { Redis } from 'ioredis';
 import { config } from '../config/index.js';
-import { getLogger, MessengerType as MT, UserIdType as UIT } from '@olow/engine';
-import type { MessengerType, UserIdType, IBroker, ILlmProvider, IMessagingProvider, CycleCreateParams, CycleUpdateParams } from '@olow/engine';
+import { getLogger, UserIdType as UIT } from '@olow/engine';
+import type { UserIdType, IBroker, ILlmProvider, IMessagingProvider, CycleCreateParams, CycleUpdateParams } from '@olow/engine';
 import * as mongo from '../storage/mongo.js';
 import * as wecomApi from '../services/wecom.api.js';
 import * as workdayApi from '../services/workday.api.js';
 import * as itawareApi from '../services/itaware.api.js';
 import { getUserRtx } from '../services/slack.api.js';
 import { TokenCache } from './token-cache.js';
-import { LlmProvider } from './llm-provider.js';
-import { WeComMessagingProvider } from './wecom-messaging.js';
-import { AppUserContextRefresher } from './user-context.js';
+import { LlmProvider } from './llm.provider.js';
+import { UserContextProvider } from './user-context.provider.js';
 
 const logger = getLogger();
 
@@ -22,15 +21,14 @@ export class Broker implements IBroker {
   readonly redis: Redis;
 
   // Token caches
-  private readonly wecomBotTokenCache: TokenCache;
-  private readonly wecomGroupbotTokenCache: TokenCache;
+  readonly wecomBotTokenCache: TokenCache;
   private readonly workdayTokenCache: TokenCache;
   private readonly itawareTokenCache: TokenCache;
 
   // Sub-providers
   private readonly _llm: LlmProvider;
-  private readonly _messaging: WeComMessagingProvider;
-  private readonly _userContext: AppUserContextRefresher;
+  private _messaging?: IMessagingProvider;
+  private readonly _userContext: UserContextProvider;
 
   // Token rotation
   private _tokenIndex = 0;
@@ -58,11 +56,6 @@ export class Broker implements IBroker {
       () => wecomApi.getToken(config.wecom_bot.corp_id, config.wecom_bot.corp_secret),
       getBuffer, persist,
     );
-    this.wecomGroupbotTokenCache = new TokenCache(
-      'WeCom_GroupBot',
-      () => wecomApi.getToken(config.wecom_bot.corp_id, config.wecom_bot.corp_secret),
-      getBuffer, persist,
-    );
     this.workdayTokenCache = new TokenCache(
       'Workday', () => workdayApi.getAuthToken(), getBuffer, persist,
     );
@@ -71,8 +64,7 @@ export class Broker implements IBroker {
     );
 
     this._llm = new LlmProvider(() => this.getRotatedToken());
-    this._messaging = new WeComMessagingProvider(this.wecomBotTokenCache);
-    this._userContext = new AppUserContextRefresher(this.workdayTokenCache, this.itawareTokenCache);
+    this._userContext = new UserContextProvider(this.workdayTokenCache, this.itawareTokenCache);
   }
 
   static getInstance(): Broker {
@@ -107,8 +99,12 @@ export class Broker implements IBroker {
     return this._llm;
   }
 
-  get messaging(): IMessagingProvider {
+  get messaging(): IMessagingProvider | undefined {
     return this._messaging;
+  }
+
+  setMessagingProvider(provider: IMessagingProvider): void {
+    this._messaging = provider;
   }
 
   // ─── IBroker Storage Delegates ───

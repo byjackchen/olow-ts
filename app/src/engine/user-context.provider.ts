@@ -1,6 +1,4 @@
-// ─── App-specific User Context Refresher ───
-// Fetches context from Workday + profile from ITAware.
-// Other projects would implement IUserContextRefresher differently.
+// ─── User Context Provider (implements IUserContextRefresher) ───
 
 import { getLogger } from '@olow/engine';
 import type { IUserContextRefresher, UserContextResult } from '@olow/engine';
@@ -10,7 +8,7 @@ import type { TokenCache } from './token-cache.js';
 
 const logger = getLogger();
 
-export class AppUserContextRefresher implements IUserContextRefresher {
+export class UserContextProvider implements IUserContextRefresher {
   constructor(
     private readonly workdayTokenCache: TokenCache,
     private readonly itawareTokenCache: TokenCache,

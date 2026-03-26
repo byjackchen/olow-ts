@@ -66,7 +66,7 @@ export class GreetingFlow extends BaseFlow {
       const adminGroupId = config.engine.admin_chatgroup_id;
       if (!adminGroupId) return;
       const now = new Date().toISOString();
-      await this.broker.messaging.sendGroupText(
+      await this.broker.messaging?.sendGroupText(
         adminGroupId,
         `[VIP] User ${this.request.requester.id} entered chat at ${now}`,
       );

@@ -23,7 +23,7 @@ export class BotServicesNotificationFlow extends BaseFlow {
 
     if (targetUser && message) {
       try {
-        await this.broker.messaging.sendText(targetUser, message);
+        await this.broker.messaging?.sendText(targetUser, message);
         this.dispatcher.states.service_response = { status: 'success', message: 'Notification sent' };
       } catch (err) {
         logger.error({ msg: 'Failed to send notification', err });

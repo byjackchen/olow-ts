@@ -82,7 +82,7 @@ export interface IUserContextRefresher {
 
 export interface IBroker {
   readonly llm: ILlmProvider;
-  readonly messaging: IMessagingProvider;
+  readonly messaging?: IMessagingProvider;
 
   // Storage (direct methods)
   cyclesCreate(params: CycleCreateParams): Promise<string>;

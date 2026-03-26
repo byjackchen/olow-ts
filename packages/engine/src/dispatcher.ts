@@ -310,7 +310,7 @@ export class Dispatcher implements IDispatcher {
 
     for (const dev of developers) {
       try {
-        await this.broker.messaging.sendText(dev, truncated);
+        await this.broker.messaging?.sendText(dev, truncated);
       } catch {
         // Best effort
       }

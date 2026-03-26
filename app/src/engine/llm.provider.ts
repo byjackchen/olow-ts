@@ -1,4 +1,4 @@
-// ─── LLM Provider (extracted from Broker) ───
+// ─── LLM Provider (implements ILlmProvider) ───
 
 import { config } from '../config/index.js';
 import { getLogger, StructuralStreamParser, Section } from '@olow/engine';
