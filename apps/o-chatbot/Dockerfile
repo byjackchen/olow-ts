@@ -25,5 +25,5 @@ COPY package.json ./
 RUN mkdir -p /app/logs && chown -R appuser:appuser /app
 USER appuser
 WORKDIR /app/apps/o-chatbot
-EXPOSE 5001
+EXPOSE 3000
 CMD ["node", "dist/index.js"]

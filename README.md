@@ -68,7 +68,7 @@ olow-ts/
 │   ├── messengers/       @olow/messengers       Messenger impls + templates + i18n
 │   └── react-agent/      @olow/react-agent      ReAct reasoning agent (5-flow pipeline)
 │
-├── app/                  olow-app               Reference application
+├── apps/o-chatbot/                  olow-app               Reference application
 │   └── src/
 │       ├── index.ts                 Bootstrap & Fastify routes
 │       ├── config/                  YAML + .env config loading
@@ -160,7 +160,7 @@ class Messenger {
 **4. Pluggable routing (side-effect registration)**
 
 ```typescript
-// app/src/events.ts — registered on import
+// apps/o-chatbot/src/events.ts — registered on import
 registerSystemActionParser((msg) => { ... });
 registerEventRouter((action, msg, channelType) => { ... });
 ```
@@ -177,10 +177,10 @@ registerEventRouter((action, msg, channelType) => { ... });
    ├── Memory config + storage binding
    ├── Broker.initialize()     (Redis connect, MongoDB connect)
    ├── Module discovery        (scan dirs → import → decorators fire → registry populated)
-   │   ├── flowRegistry        ← app/src/flows/*.ts
-   │   ├── toolRegistry        ← app/src/tools/*.ts
-   │   ├── actionchainRegistry ← app/src/actionchains/*.ts
-   │   └── messengerRegistry   ← app/src/messengers/*.ts + @olow/messengers (WebBot)
+   │   ├── flowRegistry        ← apps/o-chatbot/src/flows/*.ts
+   │   ├── toolRegistry        ← apps/o-chatbot/src/tools/*.ts
+   │   ├── actionchainRegistry ← apps/o-chatbot/src/actionchains/*.ts
+   │   └── messengerRegistry   ← apps/o-chatbot/src/messengers/*.ts + @olow/messengers (WebBot)
    └── MCP proxy (if configured)
 5. Fastify routes bound
 6. Server listening
@@ -279,7 +279,7 @@ export class MyTool extends BaseTool {
 ### Adding a Custom Messenger
 
 ```typescript
-// app/src/messengers/slack.messenger.ts
+// apps/o-chatbot/src/messengers/slack.messenger.ts
 import { messengerRegistry, MessengerType as MT } from '@olow/engine';
 import type { IMessenger } from '@olow/engine';
 
@@ -338,7 +338,7 @@ cp .env.example .env   # configure API keys
 docker compose up --build -d
 
 # Test
-curl -N -X POST 'http://localhost:5001/web_bot?mode=stream' \
+curl -N -X POST 'http://localhost:3070/web_bot?mode=stream' \
   -H 'Authorization: Bearer <token>' \
   -H 'Content-Type: application/json' \
   -d '{"UserId":"test","content":"hello","action":"enter_chat"}'

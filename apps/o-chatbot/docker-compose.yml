@@ -4,7 +4,7 @@ services:
       context: ../..
       dockerfile: apps/o-chatbot/Dockerfile
     ports:
-      - "5001:5001"
+      - "3070:3000"
     env_file:
       - .env
     volumes:

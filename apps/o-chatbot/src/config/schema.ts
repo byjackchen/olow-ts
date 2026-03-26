@@ -66,7 +66,7 @@ export const configSchema = z.object({
 
   server: z.object({
     host: z.string().default('0.0.0.0'),
-    port: z.coerce.number().default(5001),
+    port: z.coerce.number().default(3000),
   }),
 
   auth: z.object({

@@ -27,8 +27,6 @@
     "pino-pretty": "^13.0.0",
     "yaml": "^2.8.0",
     "openai": "^5.8.2",
-    "graphology": "^0.25.4",
-    "graphology-types": "^0.24.7",
     "@slack/bolt": "^4.3.1",
     "@modelcontextprotocol/sdk": "^1.12.3",
     "fast-xml-parser": "^5.2.3"
