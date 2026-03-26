@@ -13,7 +13,7 @@ export {
 } from './events.js';
 
 // Registry
-export { ModuleRegistry, flowRegistry, toolRegistry, actionchainRegistry, setSpace, getSpace } from './registry.js';
+export { ModuleRegistry, flowRegistry, toolRegistry, actionchainRegistry } from './registry.js';
 
 // Base Classes
 export { BaseFlow, type IDispatcher } from './base-flow.js';
@@ -33,7 +33,7 @@ export type { IMessenger, RequestInitResult, SayResult } from './messengers.js';
 
 // Types (all const-enums and Zod schemas)
 export {
-  ResponseMode, SpaceType, RequesterType, UserIdType, ChannelType,
+  ResponseMode, RequesterType, UserIdType, ChannelType,
   SystemName, SiteName, MessengerType, SentToType, MsgType, FlowMsgType,
   EventType, CoreEventType, EventStatus, ActionType, CoreActionType, ToolArgumentType, Language, TicketStates,
   FunctionCallPredictionMode, ACTION_CHAIN_ROOT_KEY,

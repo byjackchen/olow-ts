@@ -9,12 +9,6 @@ export const ResponseMode = {
 } as const;
 export type ResponseMode = (typeof ResponseMode)[keyof typeof ResponseMode];
 
-export const SpaceType = {
-  OHR: 'ohr',
-  OIT: 'oit',
-} as const;
-export type SpaceType = (typeof SpaceType)[keyof typeof SpaceType];
-
 export const RequesterType = {
   USER: 'User',
   SYSTEM: 'System',

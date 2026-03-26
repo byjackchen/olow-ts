@@ -3,12 +3,11 @@ import { fileURLToPath } from 'node:url';
 import Fastify from 'fastify';
 import { config } from './config/index.js';
 import {
-  OlowEngine, getLogger,
+  OlowEngine, getLogger, createMessenger,
   ResponseMode, MessengerType, RequesterType, SystemName,
   type BotEngineStreamOutput,
 } from '@olow/engine';
 import { Broker } from './engine/broker.js';
-import { createMessenger } from '@olow/engine';
 import { setReactAgentConfig } from '@olow/react-agent';
 import './events.js'; // registers system action parsers and event routers
 
@@ -29,7 +28,6 @@ async function start(): Promise<void> {
     .withConfig(config.engine)
     .withBroker(Broker.getInstance())
     .withMessengerFactory(createMessenger)
-    .withSpace(config.space)
     .addFlowDir(join(__dirname, 'flows'))
     .addToolDir(join(__dirname, 'tools'))
     .addActionChainDir(join(__dirname, 'actionchains'))
@@ -69,7 +67,6 @@ async function start(): Promise<void> {
 
     const gen = engine.processRequest({
       responseMode: mode === 'stream' ? ResponseMode.STREAM : ResponseMode.POST,
-      space: config.space,
       messengerType: MessengerType.WEB_BOT,
       requesterType: RequesterType.USER,
       inMsg: body,
@@ -94,8 +91,7 @@ async function start(): Promise<void> {
 
   app.post('/wecom_bot', async (request, reply) => {
     void consumeBackground(engine.processRequest({
-      responseMode: ResponseMode.POST, space: config.space,
-      messengerType: MessengerType.WECOM_BOT, requesterType: RequesterType.USER,
+      responseMode: ResponseMode.POST,      messengerType: MessengerType.WECOM_BOT, requesterType: RequesterType.USER,
       inMsg: request.body as Record<string, unknown>,
     }));
     return reply.send('');
@@ -103,8 +99,7 @@ async function start(): Promise<void> {
 
   app.post('/slack_bot', { preHandler: verifyToken }, async (request, reply) => {
     void consumeBackground(engine.processRequest({
-      responseMode: ResponseMode.POST, space: config.space,
-      messengerType: MessengerType.SLACK_BOT, requesterType: RequesterType.USER,
+      responseMode: ResponseMode.POST,      messengerType: MessengerType.SLACK_BOT, requesterType: RequesterType.USER,
       inMsg: request.body as Record<string, unknown>,
     }));
     return reply.send({});
@@ -112,8 +107,7 @@ async function start(): Promise<void> {
 
   app.post('/midserver', async (request, reply) => {
     return reply.send(await consumeBlock(engine.processRequest({
-      responseMode: ResponseMode.POST, space: config.space,
-      messengerType: MessengerType.WECOM_BOT, requesterType: RequesterType.SYSTEM,
+      responseMode: ResponseMode.POST,      messengerType: MessengerType.WECOM_BOT, requesterType: RequesterType.SYSTEM,
       systemName: SystemName.SERVICENOW,
       inMsg: request.body as Record<string, unknown>,
     })));
@@ -126,8 +120,7 @@ async function start(): Promise<void> {
     }
 
     const states = await consumeBlock(engine.processRequest({
-      responseMode: ResponseMode.POST, space: config.space,
-      messengerType: MessengerType.WECOM_BOT, requesterType: RequesterType.SYSTEM,
+      responseMode: ResponseMode.POST,      messengerType: MessengerType.WECOM_BOT, requesterType: RequesterType.SYSTEM,
       systemName: SystemName.DEFAULTSYS, inMsg: body,
     })) as Record<string, unknown>;
 

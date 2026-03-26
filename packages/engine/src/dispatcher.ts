@@ -7,7 +7,6 @@ import {
   EventStatus as ES,
   type ResponseMode,
   ResponseMode as RM,
-  type SpaceType,
   type MessengerType,
   type RequesterType,
   RequesterType as RT,
@@ -73,7 +72,6 @@ export class Dispatcher implements IDispatcher {
   backgroundTasks: Promise<unknown>[] = [];
 
   // Set during async initialization
-  space: SpaceType | null = null;
   messenger: IMessenger | null = null;
   request!: Request;
   cycleId: string | null = null;
@@ -89,14 +87,11 @@ export class Dispatcher implements IDispatcher {
   }
 
   async asyncInitialize(
-    space: SpaceType,
     messengerType?: MessengerType,
     requesterType?: RequesterType,
     inMsg?: Record<string, unknown>,
     systemName?: SystemName,
   ): Promise<void> {
-    this.space = space;
-
     if (!messengerType && !requesterType) {
       logger.info('Dispatcher initialized without messenger/requester — offline/test mode');
       return;
@@ -237,7 +232,6 @@ export class Dispatcher implements IDispatcher {
   static async *asyncMain(opts: {
     broker: IBroker;
     responseMode: ResponseMode;
-    space: SpaceType;
     messengerType?: MessengerType;
     requesterType?: RequesterType;
     inMsg?: Record<string, unknown>;
@@ -245,7 +239,7 @@ export class Dispatcher implements IDispatcher {
   }): AsyncGenerator<BotEngineStreamOutput> {
     const dispatcher = new Dispatcher(opts.broker);
     await dispatcher.asyncInitialize(
-      opts.space, opts.messengerType, opts.requesterType, opts.inMsg, opts.systemName,
+      opts.messengerType, opts.requesterType, opts.inMsg, opts.systemName,
     );
 
     requestContext.enterWith({

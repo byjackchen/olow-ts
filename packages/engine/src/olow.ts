@@ -1,9 +1,9 @@
 import type { IBroker } from './broker-interfaces.js';
 import { engineConfigSchema, type EngineConfig } from './config.js';
 import type { IMessenger } from './messengers.js';
-import type { MessengerType, SpaceType, ResponseMode, RequesterType, SystemName, BotEngineStreamOutput } from './types.js';
+import type { MessengerType, ResponseMode, RequesterType, SystemName, BotEngineStreamOutput } from './types.js';
 import { Dispatcher, setDispatcherConfig } from './dispatcher.js';
-import { flowRegistry, toolRegistry, actionchainRegistry, setSpace } from './registry.js';
+import { flowRegistry, toolRegistry, actionchainRegistry } from './registry.js';
 import { createLogger, setLogger } from './logger.js';
 import { setMemoryConfig, setMemoryStorage } from './memory/index.js';
 import { BaseFlow } from './base-flow.js';
@@ -20,7 +20,6 @@ export class OlowEngine {
   private _broker?: IBroker;
   private _messengerFactory?: MessengerFactory;
   private _config?: EngineConfig;
-  private _space?: SpaceType;
   private _flowDirs: string[] = [];
   private _toolDirs: string[] = [];
   private _actionchainDirs: string[] = [];
@@ -42,11 +41,6 @@ export class OlowEngine {
 
   withConfig(config: Record<string, unknown>): this {
     this._config = engineConfigSchema.parse(config);
-    return this;
-  }
-
-  withSpace(space: SpaceType): this {
-    this._space = space;
     return this;
   }
 
@@ -98,12 +92,7 @@ export class OlowEngine {
       setLogger(l);
     }
 
-    // 2. Set space for registry filtering
-    if (this._space) {
-      setSpace(this._space);
-    }
-
-    // 3. Configure dispatcher
+    // 2. Configure dispatcher
     if (config) {
       setDispatcherConfig({
         max_event_loops: config.max_event_loops,
@@ -165,7 +154,6 @@ export class OlowEngineInstance {
 
   async *processRequest(opts: {
     responseMode: ResponseMode;
-    space: SpaceType;
     messengerType?: MessengerType;
     requesterType?: RequesterType;
     inMsg?: Record<string, unknown>;

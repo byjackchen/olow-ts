@@ -1,21 +1,8 @@
 import { readdir } from 'node:fs/promises';
 import { join, extname, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import type { SpaceType } from './types.js';
 import { getLogger } from './logger.js';
 const logger = getLogger();
-
-// ─── Space Config ───
-
-let _currentSpace: SpaceType | null = null;
-
-export function setSpace(space: SpaceType): void {
-  _currentSpace = space;
-}
-
-export function getSpace(): SpaceType | null {
-  return _currentSpace;
-}
 
 // ─── Module Registry ───
 
@@ -25,12 +12,10 @@ type Constructor = abstract new (...args: any[]) => any;
 export class ModuleRegistry {
   private registry = new Map<string, unknown>();
 
-  register(opts?: { name?: string; restrictedSpaces?: SpaceType[] }) {
+  register(opts?: { name?: string }) {
     return <T extends Constructor>(target: T, _context?: ClassDecoratorContext): T => {
       const name = opts?.name ?? target.name;
-      if (!opts?.restrictedSpaces || !_currentSpace || opts.restrictedSpaces.includes(_currentSpace)) {
-        this.registry.set(name, target);
-      }
+      this.registry.set(name, target);
       return target;
     };
   }

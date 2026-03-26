@@ -60,9 +60,6 @@ function loadConfig(): Config {
   const interpolated = interpolateEnv(rawYaml) as Record<string, unknown>;
 
   interpolated['env'] = env;
-  if (typeof interpolated['space'] === 'string') {
-    interpolated['space'] = interpolated['space'].toLowerCase();
-  }
 
   const result = configSchema.safeParse(interpolated);
   if (!result.success) {
@@ -74,7 +71,6 @@ function loadConfig(): Config {
   }
 
   console.error(`-->> Environment: ${env}`);
-  console.error(`-->> Space: ${result.data.space}`);
   console.error(`-->> Version: ${result.data.version}`);
 
   return result.data;

@@ -14,7 +14,6 @@ const llmModelSchema = z.object({
 
 export const configSchema = z.object({
   env: z.string(),
-  space: z.enum(['oit', 'ohr']),
   version: z.string(),
 
   engine: z.object({
