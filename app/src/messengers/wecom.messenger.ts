@@ -6,12 +6,29 @@ import type {
   IBroker, MessengerType, RequesterType, FlowMsgType, SentToType,
   ChannelType, IMessenger, RequestInitResult, SayResult, ITemplate, IDispatcher,
 } from '@olow/engine';
+import * as wecomApi from '../services/wecom.api.js';
+import type { Broker } from '../engine/broker.js';
 
 function resolveSessionId(msg: Record<string, unknown>, channelType: ChannelType | null): string {
   if (channelType === 'group') return 'default';
   const sid = msg['SessionId'];
   if (typeof sid === 'string' && sid.trim()) return sid.trim();
   return 'default';
+}
+
+async function withTokenRetry(broker: Broker, fn: (token: string) => Promise<void>): Promise<void> {
+  try {
+    const token = await broker.wecomBotTokenCache.get();
+    await fn(token);
+  } catch (err) {
+    if (err instanceof wecomApi.AccessTokenError) {
+      await broker.wecomBotTokenCache.forceRefresh();
+      const token = await broker.wecomBotTokenCache.get();
+      await fn(token);
+    } else {
+      throw err;
+    }
+  }
 }
 
 @messengerRegistry.register({ name: MT.WECOM_BOT })
@@ -58,16 +75,16 @@ export class WeComMessenger implements IMessenger {
     revokeTrackingIds?: string[];
   }): Promise<SayResult> {
     const [msgType, message] = opts.template.render(this.type);
-    const messaging = opts.dispatcher.broker.messaging;
-    if (!messaging) throw new Error('IMessagingProvider not configured on broker');
+    const broker = opts.dispatcher.broker as Broker;
 
     if (typeof message === 'string' && message.trim()) {
       if (opts.sentToType === STT.GROUPCHAT) {
-        await messaging.sendGroupText(opts.sentTo, message);
+        const truncated = message.length > 5117 ? message.slice(0, 5117) + '\n...(truncated)' : message;
+        await withTokenRetry(broker, (token) => wecomApi.sendGroupText(token, opts.sentTo, truncated));
       } else if (msgType === MsgType.WECOM_RICHTEXT) {
-        await messaging.sendRichText(opts.sentTo, message);
+        await withTokenRetry(broker, (token) => wecomApi.sendSingleRichtext(token, opts.sentTo, message));
       } else {
-        await messaging.sendText(opts.sentTo, message);
+        await withTokenRetry(broker, (token) => wecomApi.sendSingleText(token, opts.sentTo, message));
       }
     }
 

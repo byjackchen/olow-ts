@@ -10,7 +10,6 @@ import {
 import { Messenger } from '@olow/messengers';
 import { Broker } from './engine/broker.js';
 import { MessagingProvider } from './engine/messaging.provider.js';
-import './messengers/wecom.messenger.js'; // registers WeComMessenger
 import { setReactAgentConfig } from '@olow/react-agent';
 import './events.js'; // registers system action parsers and event routers
 
@@ -37,6 +36,7 @@ async function start(): Promise<void> {
     .addFlowDir(join(__dirname, 'flows'))
     .addToolDir(join(__dirname, 'tools'))
     .addActionChainDir(join(__dirname, 'actionchains'))
+    .addMessengerDir(join(__dirname, 'messengers'))
     .initialize();
 
   const logger = getLogger();

@@ -3,7 +3,7 @@ import { engineConfigSchema, type EngineConfig } from './config.js';
 import type { MessengerFactory } from './messengers.js';
 import type { MessengerType, ResponseMode, RequesterType, SystemName, BotEngineStreamOutput } from './types.js';
 import { Dispatcher, setDispatcherConfig } from './dispatcher.js';
-import { flowRegistry, toolRegistry, actionchainRegistry } from './registry.js';
+import { flowRegistry, toolRegistry, actionchainRegistry, messengerRegistry } from './registry.js';
 import { createLogger, setLogger } from './logger.js';
 import { setMemoryConfig, setMemoryStorage } from './memory/index.js';
 import { BaseFlow } from './base-flow.js';
@@ -19,6 +19,7 @@ export class OlowEngine {
   private _flowDirs: string[] = [];
   private _toolDirs: string[] = [];
   private _actionchainDirs: string[] = [];
+  private _messengerDirs: string[] = [];
   private _mcpProxy: McpToolProxy | null = null;
 
   static create(): OlowEngine {
@@ -52,6 +53,11 @@ export class OlowEngine {
 
   addActionChainDir(dir: string): this {
     this._actionchainDirs.push(dir);
+    return this;
+  }
+
+  addMessengerDir(dir: string): this {
+    this._messengerDirs.push(dir);
     return this;
   }
 
@@ -116,6 +122,9 @@ export class OlowEngine {
     }
     for (const dir of this._actionchainDirs) {
       await actionchainRegistry.discoverModules(dir);
+    }
+    for (const dir of this._messengerDirs) {
+      await messengerRegistry.discoverModules(dir);
     }
 
     // 7. MCP client proxy — connect to external MCP servers and register tools
