@@ -81,11 +81,12 @@ export class Dispatcher implements IDispatcher {
     this.eventchain = new EventChain();
     this.responses = new ResponseChain();
     this.states = FlowStatesSchema.parse({});
-    this.flows = [...flowRegistry.getRegistered<typeof BaseFlow>().values()];
-    this.toolsMap = toolRegistry.getRegistered<typeof BaseTool>();
-    this.actionchainsMap = actionchainRegistry.getRegistered<typeof BaseActionChain>();
+    this.flows = [...flowRegistry.getRegistered<typeof BaseFlow>().values()]; // Flows are Mounted at Booting-Time
+    this.toolsMap = toolRegistry.getRegistered<typeof BaseTool>(); // Tools are Mounted at Booting-Time
+    this.actionchainsMap = actionchainRegistry.getRegistered<typeof BaseActionChain>(); // Action Chains are Mounted at Booting-Time
   }
 
+  // Messenger is Per-Request-Time Initialized
   private createMessenger(type: MessengerType): IMessenger {
     const Cls = messengerRegistry.getRegistered().get(type) as
       (new (...args: unknown[]) => IMessenger) | undefined;
