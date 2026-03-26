@@ -5,7 +5,7 @@ import {
 } from '@olow/engine';
 import { BaseTool, toolRegistry } from '@olow/engine';
 import type { Event, ToolResult } from '@olow/engine';
-import { GuestWifiTemplate, SingleMediaTemplate } from '@olow/templates';
+import { GuestWifiTemplate, SingleMediaTemplate } from '@olow/messengers';
 import { MsgType } from '@olow/engine';
 import * as servicenow from '../services/servicenow.api.js';
 import type { GuestWifiInfo } from '../services/servicenow.api.js';

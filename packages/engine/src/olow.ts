@@ -1,6 +1,6 @@
 import type { IBroker } from './broker-interfaces.js';
 import { engineConfigSchema, type EngineConfig } from './config.js';
-import type { IMessenger } from './messengers.js';
+import type { MessengerFactory } from './messengers.js';
 import type { MessengerType, ResponseMode, RequesterType, SystemName, BotEngineStreamOutput } from './types.js';
 import { Dispatcher, setDispatcherConfig } from './dispatcher.js';
 import { flowRegistry, toolRegistry, actionchainRegistry } from './registry.js';
@@ -9,10 +9,6 @@ import { setMemoryConfig, setMemoryStorage } from './memory/index.js';
 import { BaseFlow } from './base-flow.js';
 import { BaseTool } from './base-tool.js';
 import { McpToolProxy } from './mcp/proxy.js';
-
-// ─── Messenger Factory Type ───
-
-export type MessengerFactory = (type: MessengerType) => IMessenger;
 
 // ─── OlowEngine Builder ───
 
@@ -161,6 +157,7 @@ export class OlowEngineInstance {
   }): AsyncGenerator<BotEngineStreamOutput> {
     yield* Dispatcher.asyncMain({
       broker: this.broker,
+      messengerFactory: this.messengerFactory,
       ...opts,
     });
   }

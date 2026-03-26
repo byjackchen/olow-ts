@@ -1,7 +1,7 @@
 // ═══════════════════ @olow/engine — Public API ═══════════════════
 
 // Builder
-export { OlowEngine, OlowEngineInstance, type MessengerFactory } from './olow.js';
+export { OlowEngine, OlowEngineInstance } from './olow.js';
 
 // Core
 export { Dispatcher, setDispatcherConfig, type DispatcherEngineConfig } from './dispatcher.js';
@@ -28,8 +28,7 @@ export type {
 } from './broker-interfaces.js';
 
 // Messenger Interface
-export { createMessenger } from './messengers.js';
-export type { IMessenger, RequestInitResult, SayResult } from './messengers.js';
+export type { IMessenger, RequestInitResult, SayResult, MessengerFactory } from './messengers.js';
 
 // Types (all const-enums and Zod schemas)
 export {

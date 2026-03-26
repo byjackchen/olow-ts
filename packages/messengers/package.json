@@ -1,7 +1,7 @@
 {
-  "name": "@olow/react-agent",
+  "name": "@olow/messengers",
   "version": "1.0.0",
-  "description": "Olow ReAct reasoning agent — intent, plan, act, response flows",
+  "description": "Olow messenger implementations + templates",
   "type": "module",
   "engines": { "node": ">=22.0.0" },
   "main": "dist/index.js",
@@ -14,8 +14,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@olow/engine": "*",
-    "@olow/messengers": "*"
+    "@olow/engine": "*"
   },
   "devDependencies": {
     "typescript": "^5.8.3",

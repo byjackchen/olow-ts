@@ -3,10 +3,11 @@ import { fileURLToPath } from 'node:url';
 import Fastify from 'fastify';
 import { config } from './config/index.js';
 import {
-  OlowEngine, getLogger, createMessenger,
+  OlowEngine, getLogger,
   ResponseMode, MessengerType, RequesterType, SystemName,
   type BotEngineStreamOutput,
 } from '@olow/engine';
+import { createMessenger } from '@olow/messengers';
 import { Broker } from './engine/broker.js';
 import { setReactAgentConfig } from '@olow/react-agent';
 import './events.js'; // registers system action parsers and event routers

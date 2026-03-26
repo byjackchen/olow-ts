@@ -6,7 +6,7 @@ import type { MessengerType } from '@olow/engine';
 import { AppEventType } from '../events.js';
 import { ReactEventType } from '@olow/react-agent';
 const logger = getLogger();
-import { TextTemplate, AgentSupportConfirmTemplate, I18n } from '@olow/templates';
+import { TextTemplate, AgentSupportConfirmTemplate, I18n } from '@olow/messengers';
 import { config } from '../config/index.js';
 
 // ─── Similarity Words ───

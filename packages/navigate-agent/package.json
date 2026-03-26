@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "@olow/engine": "*",
-    "@olow/templates": "*"
+    "@olow/messengers": "*"
   },
   "devDependencies": {
     "typescript": "^5.8.3",

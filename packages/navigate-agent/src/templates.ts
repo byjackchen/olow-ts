@@ -1,5 +1,5 @@
 import type { ITemplate, Language } from '@olow/engine';
-import { TextTemplate, I18n } from '@olow/templates';
+import { TextTemplate, I18n } from '@olow/messengers';
 
 export interface INavigateTemplateProvider {
   text(lines: string[]): ITemplate;

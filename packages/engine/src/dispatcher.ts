@@ -25,7 +25,7 @@ import {
   type StreamDeltaFlowMsg,
 } from './events.js';
 import type { IBroker } from './broker-interfaces.js';
-import { createMessenger, type IMessenger } from './messengers.js';
+import type { IMessenger, MessengerFactory } from './messengers.js';
 import { BaseFlow, type IDispatcher } from './base-flow.js';
 import type { BaseTool } from './base-tool.js';
 import type { BaseActionChain } from './base-actionchain.js';
@@ -87,6 +87,7 @@ export class Dispatcher implements IDispatcher {
   }
 
   async asyncInitialize(
+    messengerFactory: MessengerFactory,
     messengerType?: MessengerType,
     requesterType?: RequesterType,
     inMsg?: Record<string, unknown>,
@@ -97,7 +98,7 @@ export class Dispatcher implements IDispatcher {
       return;
     }
 
-    this.messenger = messengerType ? createMessenger(messengerType) : null;
+    this.messenger = messengerType ? messengerFactory(messengerType) : null;
 
     if (requesterType === RT.USER && messengerType) {
       this.request = new Request({
@@ -231,6 +232,7 @@ export class Dispatcher implements IDispatcher {
 
   static async *asyncMain(opts: {
     broker: IBroker;
+    messengerFactory: MessengerFactory;
     responseMode: ResponseMode;
     messengerType?: MessengerType;
     requesterType?: RequesterType;
@@ -239,7 +241,7 @@ export class Dispatcher implements IDispatcher {
   }): AsyncGenerator<BotEngineStreamOutput> {
     const dispatcher = new Dispatcher(opts.broker);
     await dispatcher.asyncInitialize(
-      opts.messengerType, opts.requesterType, opts.inMsg, opts.systemName,
+      opts.messengerFactory, opts.messengerType, opts.requesterType, opts.inMsg, opts.systemName,
     );
 
     requestContext.enterWith({
