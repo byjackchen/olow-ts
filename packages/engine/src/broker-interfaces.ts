@@ -1,25 +1,23 @@
-import type { MessageQueue } from './types.js';
+import type { MessageQueue } from '@olow/types';
 
-// ═══════════════════ LLM Call Options ═══════════════════
-
-export interface LlmCallOpts {
-  jsonMode?: 'string' | 'json' | 'json_fence';
-  provider?: string;
-  model?: string;
-}
+// Re-export simple interfaces from @olow/types
+export type {
+  LlmCallOpts, CycleCreateParams, CycleUpdateParams,
+  UserContextResult, IUserContextRefresher,
+} from '@olow/types';
 
 // ═══════════════════ Sub-Provider Interfaces ═══════════════════
 
 export interface ILlmProvider {
   callLlm(
     message: string,
-    opts?: LlmCallOpts,
+    opts?: import('@olow/types').LlmCallOpts,
   ): Promise<[success: boolean, result: string | Record<string, unknown> | null]>;
 
   callLlmStream(
     message: string,
     msgQueue: MessageQueue | { put: (msg: unknown) => Promise<void> },
-    opts?: LlmCallOpts,
+    opts?: import('@olow/types').LlmCallOpts,
   ): Promise<[success: boolean, result: string | Record<string, unknown> | null]>;
 }
 
@@ -32,52 +30,6 @@ export interface IMessagingProvider {
   createChatGroup(name: string, userList: string[]): Promise<string>;
 }
 
-// ═══════════════════ Storage Types ═══════════════════
-
-export interface CycleCreateParams {
-  cycleId: string;
-  requesterType: string;
-  requesterId: string;
-  requestSessionId: string;
-  requestMsg: Record<string, unknown>;
-  requestAction: string;
-  requestContent: string;
-  requestTime: Date;
-  requestGroupchatId?: string | null;
-  deviceType?: string | null;
-  responses?: unknown[] | null;
-  ticket?: unknown | null;
-  isHelpful?: boolean | null;
-  clicks?: string[] | null;
-  shownFaqs?: unknown[] | null;
-  flowStates?: Record<string, unknown> | null;
-}
-
-export interface CycleUpdateParams {
-  responses?: unknown[];
-  ticket?: unknown;
-  isHelpful?: boolean;
-  shownFaqs?: unknown[];
-  clicks?: string[];
-  flowStates?: Record<string, unknown>;
-}
-
-// ═══════════════════ User Context Refresher ═══════════════════
-
-export interface UserContextResult {
-  context: Record<string, unknown> | null;
-  profile: { summary: string; topics: Array<Record<string, unknown>>; tags: string[] } | null;
-}
-
-/**
- * Pluggable interface for refreshing user context from external sources.
- * Each project implements this differently (e.g. Workday + ITAware, LDAP, custom HR system).
- * The engine only depends on this interface — concrete implementations live in app/.
- */
-export interface IUserContextRefresher {
-  refresh(userId: string, proxyUserId?: string): Promise<UserContextResult>;
-}
-
 // ═══════════════════ Composite IBroker ═══════════════════
 
 export interface IBroker {
@@ -85,8 +37,8 @@ export interface IBroker {
   readonly messaging?: IMessagingProvider;
 
   // Storage (direct methods)
-  cyclesCreate(params: CycleCreateParams): Promise<string>;
-  cyclesUpdate(id: string, update: CycleUpdateParams): Promise<void>;
+  cyclesCreate(params: import('@olow/types').CycleCreateParams): Promise<string>;
+  cyclesUpdate(id: string, update: import('@olow/types').CycleUpdateParams): Promise<void>;
   cyclesGetOneById(id: string): Promise<Record<string, unknown> | null>;
   getUser(userId: string): Promise<Record<string, unknown> | null>;
   upsertUser(userId: string, data: Record<string, unknown>): Promise<void>;
@@ -98,7 +50,7 @@ export interface IBroker {
   incrementPeakShaving(ttlSeconds?: number): Promise<number>;
 
   // User context refresh (optional — app provides IUserContextRefresher implementation)
-  refreshUserContext?(userId: string, proxyUserId?: string): Promise<UserContextResult>;
+  refreshUserContext?(userId: string, proxyUserId?: string): Promise<import('@olow/types').UserContextResult>;
 
   // User ID resolution
   getUserId(idType: string, nonStdId: string): Promise<string>;

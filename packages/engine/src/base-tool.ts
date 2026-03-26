@@ -1,28 +1,7 @@
-import type { ToolArgumentType } from './types.js';
+import type { ToolTag, ToolResult } from '@olow/types';
 
-export interface ToolParameter {
-  type: ToolArgumentType;
-  required: boolean;
-  description: string;
-}
-
-export interface ToolTag {
-  name: string;
-  labelName: string;
-  isSpecialized: boolean;
-  mcpExposable: boolean;
-  actionchainMainKey: string | null;
-  description: string;
-  parameters: Record<string, ToolParameter>;
-  intentHints?: string[];
-}
-
-export interface ToolResult {
-  success: boolean;
-  data?: unknown;
-  error?: string;
-  [key: string]: unknown;
-}
+// Re-export interfaces from @olow/types
+export type { ToolParameter, ToolTag, ToolResult } from '@olow/types';
 
 export abstract class BaseTool {
   static readonly toolTag: ToolTag;
