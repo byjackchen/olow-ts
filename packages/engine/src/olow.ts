@@ -1,6 +1,5 @@
 import type { IBroker } from './broker-interfaces.js';
 import { engineConfigSchema, type EngineConfig } from './config.js';
-import type { MessengerFactory } from './messengers.js';
 import type { MessengerType, ResponseMode, RequesterType, SystemName, BotEngineStreamOutput } from './types.js';
 import { Dispatcher, setDispatcherConfig } from './dispatcher.js';
 import { flowRegistry, toolRegistry, actionchainRegistry, messengerRegistry, templateRegistry } from './registry.js';
@@ -14,7 +13,6 @@ import { McpToolProxy } from './mcp/proxy.js';
 
 export class OlowEngine {
   private _broker?: IBroker;
-  private _messengerFactory?: MessengerFactory;
   private _config?: EngineConfig;
   private _flowDirs: string[] = [];
   private _toolDirs: string[] = [];
@@ -29,11 +27,6 @@ export class OlowEngine {
 
   withBroker(broker: IBroker): this {
     this._broker = broker;
-    return this;
-  }
-
-  withMessengerFactory(factory: MessengerFactory): this {
-    this._messengerFactory = factory;
     return this;
   }
 
@@ -85,7 +78,6 @@ export class OlowEngine {
 
   async initialize(): Promise<OlowEngineInstance> {
     if (!this._broker) throw new Error('OlowEngine: broker is required. Call withBroker().');
-    if (!this._messengerFactory) throw new Error('OlowEngine: messengerFactory is required. Call withMessengerFactory().');
 
     const config = this._config;
 
@@ -110,16 +102,16 @@ export class OlowEngine {
       });
     }
 
-    // 4. Configure memory
+    // 3. Configure memory
     if (config?.memory) {
       setMemoryConfig(config.memory);
     }
     setMemoryStorage(this._broker!);
 
-    // 5. Initialize broker
+    // 4. Initialize broker
     await this._broker.initialize();
 
-    // 6. Discover modules
+    // 5. Discover modules
     for (const dir of this._flowDirs) {
       await flowRegistry.discoverModules(dir);
     }
@@ -136,7 +128,7 @@ export class OlowEngine {
       await templateRegistry.discoverModules(dir);
     }
 
-    // 7. MCP client proxy — connect to external MCP servers and register tools
+    // 6. MCP client proxy
     if (config?.mcp_client?.enabled && config.mcp_client.servers.length > 0) {
       this._mcpProxy = new McpToolProxy();
       const mcpTools = await this._mcpProxy.connectServers(config.mcp_client.servers);
@@ -145,11 +137,7 @@ export class OlowEngine {
       }
     }
 
-    return new OlowEngineInstance(
-      this._broker,
-      this._messengerFactory,
-      this._mcpProxy,
-    );
+    return new OlowEngineInstance(this._broker, this._mcpProxy);
   }
 }
 
@@ -157,12 +145,10 @@ export class OlowEngine {
 
 export class OlowEngineInstance {
   readonly broker: IBroker;
-  readonly messengerFactory: MessengerFactory;
   private mcpProxy: McpToolProxy | null;
 
-  constructor(broker: IBroker, messengerFactory: MessengerFactory, mcpProxy: McpToolProxy | null = null) {
+  constructor(broker: IBroker, mcpProxy: McpToolProxy | null = null) {
     this.broker = broker;
-    this.messengerFactory = messengerFactory;
     this.mcpProxy = mcpProxy;
   }
 
@@ -175,7 +161,6 @@ export class OlowEngineInstance {
   }): AsyncGenerator<BotEngineStreamOutput> {
     yield* Dispatcher.asyncDispatch({
       broker: this.broker,
-      messengerFactory: this.messengerFactory,
       ...opts,
     });
   }

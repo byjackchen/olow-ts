@@ -7,7 +7,6 @@ import {
   ResponseMode, MessengerType, RequesterType, SystemName,
   type BotEngineStreamOutput,
 } from '@olow/engine';
-import { Messenger } from '@olow/messengers';
 import { Broker } from './engine/broker.js';
 import { MessagingProvider } from './engine/messaging.provider.js';
 import { setReactAgentConfig } from '@olow/agent-flows';
@@ -32,7 +31,6 @@ async function start(): Promise<void> {
   const engine = await OlowEngine.create()
     .withConfig(config.engine)
     .withBroker(broker)
-    .withMessengerFactory(Messenger.create)
     .addFlowDir(join(__dirname, 'flows'))
     .addToolDir(join(__dirname, 'tools'))
     .addActionChainDir(join(__dirname, 'actionchains'))

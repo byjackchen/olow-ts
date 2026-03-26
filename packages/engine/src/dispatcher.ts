@@ -25,11 +25,11 @@ import {
   type StreamDeltaFlowMsg,
 } from './events.js';
 import type { IBroker } from './broker-interfaces.js';
-import type { IMessenger, MessengerFactory } from './messengers.js';
+import type { IMessenger } from './messengers.js';
 import { BaseFlow, type IDispatcher } from './base-flow.js';
 import type { BaseTool } from './base-tool.js';
 import type { BaseActionChain } from './base-actionchain.js';
-import { flowRegistry, toolRegistry, actionchainRegistry } from './registry.js';
+import { flowRegistry, toolRegistry, actionchainRegistry, messengerRegistry } from './registry.js';
 import { archiveCycle } from './archiver.js';
 import { decodeMsg, postMsg } from './message-handler.js';
 
@@ -86,8 +86,14 @@ export class Dispatcher implements IDispatcher {
     this.actionchainsMap = actionchainRegistry.getRegistered<typeof BaseActionChain>();
   }
 
+  private createMessenger(type: MessengerType): IMessenger {
+    const Cls = messengerRegistry.getRegistered().get(type) as
+      (new (...args: unknown[]) => IMessenger) | undefined;
+    if (!Cls) throw new Error(`No messenger registered for type: ${type}`);
+    return new Cls();
+  }
+
   async asyncInitialize(
-    messengerFactory: MessengerFactory,
     messengerType?: MessengerType,
     requesterType?: RequesterType,
     inMsg?: Record<string, unknown>,
@@ -98,7 +104,7 @@ export class Dispatcher implements IDispatcher {
       return;
     }
 
-    this.messenger = messengerType ? messengerFactory(messengerType) : null;
+    this.messenger = messengerType ? this.createMessenger(messengerType) : null;
 
     if (requesterType === RT.USER && messengerType) {
       this.request = new Request({
@@ -232,7 +238,6 @@ export class Dispatcher implements IDispatcher {
 
   static async *asyncDispatch(opts: {
     broker: IBroker;
-    messengerFactory: MessengerFactory;
     responseMode: ResponseMode;
     messengerType?: MessengerType;
     requesterType?: RequesterType;
@@ -241,7 +246,7 @@ export class Dispatcher implements IDispatcher {
   }): AsyncGenerator<BotEngineStreamOutput> {
     const dispatcher = new Dispatcher(opts.broker);
     await dispatcher.asyncInitialize(
-      opts.messengerFactory, opts.messengerType, opts.requesterType, opts.inMsg, opts.systemName,
+      opts.messengerType, opts.requesterType, opts.inMsg, opts.systemName,
     );
 
     requestContext.enterWith({

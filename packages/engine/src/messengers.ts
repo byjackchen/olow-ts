@@ -56,7 +56,3 @@ export interface IMessenger {
     revokeTrackingIds?: string[];
   }): Promise<SayResult>;
 }
-
-// ─── Messenger Factory Type ───
-
-export type MessengerFactory = (type: MessengerType) => IMessenger;

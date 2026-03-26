@@ -28,7 +28,7 @@ export type {
 } from './broker-interfaces.js';
 
 // Messenger Interface
-export type { IMessenger, RequestInitResult, SayResult, MessengerFactory } from './messengers.js';
+export type { IMessenger, RequestInitResult, SayResult } from './messengers.js';
 
 // Types (all const-enums and Zod schemas)
 export {
