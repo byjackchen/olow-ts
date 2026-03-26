@@ -77,12 +77,13 @@ export class WeComMessenger implements IMessenger {
     const [msgType, message] = opts.template.render(this.type);
     const broker = opts.dispatcher.broker as Broker;
 
-    if (typeof message === 'string' && message.trim()) {
+    // Richtext: message is an array of atoms
+    if (msgType === MsgType.WECOM_RICHTEXT && Array.isArray(message)) {
+      await withTokenRetry(broker, (token) => wecomApi.sendSingleRichtextAtoms(token, opts.sentTo, message as unknown[]));
+    } else if (typeof message === 'string' && message.trim()) {
       if (opts.sentToType === STT.GROUPCHAT) {
         const truncated = message.length > 5117 ? message.slice(0, 5117) + '\n...(truncated)' : message;
         await withTokenRetry(broker, (token) => wecomApi.sendGroupText(token, opts.sentTo, truncated));
-      } else if (msgType === MsgType.WECOM_RICHTEXT) {
-        await withTokenRetry(broker, (token) => wecomApi.sendSingleRichtext(token, opts.sentTo, message));
       } else {
         await withTokenRetry(broker, (token) => wecomApi.sendSingleText(token, opts.sentTo, message));
       }

@@ -1,7 +1,7 @@
 {
-  "name": "@olow/react-agent",
+  "name": "@olow/agent-flows",
   "version": "1.0.0",
-  "description": "Olow ReAct reasoning agent — intent, plan, act, response flows",
+  "description": "Olow agent flows — ReAct pipeline, OCR, navigation",
   "type": "module",
   "engines": { "node": ">=22.0.0" },
   "main": "dist/index.js",

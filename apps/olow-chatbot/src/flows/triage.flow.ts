@@ -4,7 +4,7 @@ import {
 } from '@olow/engine';
 import type { MessengerType } from '@olow/engine';
 import { AppEventType } from '../events.js';
-import { ReactEventType } from '@olow/react-agent';
+import { ReactEventType } from '@olow/agent-flows';
 const logger = getLogger();
 import { TextTemplate, AgentSupportConfirmTemplate, I18n } from '@olow/templates';
 import { config } from '../config/index.js';

@@ -159,6 +159,37 @@ export async function updateGroupchatUsers(
   });
 }
 
+// ─── File Download ───
+
+export async function getFileInMemory(token: string, mediaId: string): Promise<Buffer> {
+  const url = `${WECOM_API}/media/get?access_token=${token}&media_id=${encodeURIComponent(mediaId)}`;
+  const resp = await fetch(url);
+  if (!resp.ok) throw new Error(`WeCom getFile error ${resp.status}`);
+  const arrayBuf = await resp.arrayBuffer();
+  return Buffer.from(arrayBuf);
+}
+
+// ─── Richtext (Tencent Chat API) ───
+
+export async function sendSingleRichtextAtoms(token: string, rtx: string, richtext: unknown[]): Promise<void> {
+  const url = `https://in.qyapi.weixin.qq.com/cgi-bin/tencent/chat/send?access_token=${token}`;
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json; charset=utf-8' },
+    body: JSON.stringify({
+      receiver: { type: 'single', id: rtx },
+      msgtype: 'rich_text',
+      rich_text: richtext,
+    }),
+  });
+  if (!resp.ok) {
+    const text = await resp.text();
+    const errCode = JSON.parse(text)?.['errcode'];
+    if (errCode === 40014 || errCode === 42001) throw new AccessTokenError(text);
+    throw new Error(`WeCom sendRichtext error ${resp.status}: ${text}`);
+  }
+}
+
 // ─── Errors ───
 
 export class AccessTokenError extends Error {

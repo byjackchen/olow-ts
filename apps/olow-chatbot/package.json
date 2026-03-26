@@ -17,7 +17,7 @@
   },
   "dependencies": {
     "@olow/engine": "*",
-    "@olow/react-agent": "*",
+    "@olow/agent-flows": "*",
     "@olow/messengers": "*",
     "@olow/templates": "*",
     "fastify": "^5.3.3",

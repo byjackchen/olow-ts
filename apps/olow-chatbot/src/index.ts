@@ -10,7 +10,7 @@ import {
 import { Messenger } from '@olow/messengers';
 import { Broker } from './engine/broker.js';
 import { MessagingProvider } from './engine/messaging.provider.js';
-import { setReactAgentConfig } from '@olow/react-agent';
+import { setReactAgentConfig } from '@olow/agent-flows';
 import './events.js'; // registers system action parsers and event routers
 
 const __dirname = dirname(fileURLToPath(import.meta.url));

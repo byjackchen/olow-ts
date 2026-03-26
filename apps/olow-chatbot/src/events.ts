@@ -2,7 +2,7 @@ import {
   CoreEventType, CoreActionType,
   registerSystemActionParser, registerEventRouter,
 } from '@olow/engine';
-import { ReactEventType } from '@olow/react-agent';
+import { ReactEventType, AgentEventType } from '@olow/agent-flows';
 
 // ─── App Event Types ───
 
@@ -127,7 +127,7 @@ registerEventRouter((action, msg, channelType) => {
     if (action === CoreActionType.ENTER_CHAT) return AppEventType.GREETING;
     if (action === CoreActionType.COMMAND) return CoreEventType.COMMAND;
     if (action === CoreActionType.CLICK || action === CoreActionType.QUERY || action === CoreActionType.FILE) return CoreEventType.TRIAGE;
-    if (action === CoreActionType.IMAGE || action === CoreActionType.MIXED) return AppEventType.OCR;
+    if (action === CoreActionType.IMAGE || action === CoreActionType.MIXED) return AgentEventType.OCR;
     if (action === CoreActionType.VOICE) return AppEventType.ASR;
   }
 

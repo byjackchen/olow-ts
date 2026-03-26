@@ -312,3 +312,34 @@ ${toolResults}
 ${langInstruction}
 Be concise and helpful. If the information is insufficient, say so honestly.`;
 }
+
+// ─── Navigate Prompt ───
+
+export function navigatePrompt(
+  userQuestion: string,
+  navItems: Array<{ url: string; title: string }>,
+): string {
+  const tableLines = ['| url | title |', '|-----|-------|'];
+  for (const item of navItems) {
+    tableLines.push(`| ${item.url} | ${item.title} |`);
+  }
+
+  return `Map the user's question to a navigation target URL for a web portal.
+
+User Question: "${userQuestion}"
+
+## Available Navigation Targets
+
+${tableLines.join('\n')}
+
+Instructions:
+- Match the user's intent to ONE navigation target from the table above
+- Select the url that best matches what the user wants to do or view
+- If no navigation target matches, return empty url
+
+Return ONLY valid JSON (no explanations, no markdown):
+{"url": "/example/path?param=value", "label": "Page Name"}
+
+If no match:
+{"url": "", "label": ""}`;
+}

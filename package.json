@@ -12,8 +12,8 @@
     "node": ">=22.0.0"
   },
   "scripts": {
-    "build": "npm run build -w @olow/types && npm run build -w @olow/memory && npm run build -w @olow/engine && npm run build -w @olow/templates && npm run build -w @olow/messengers && npm run build -w @olow/react-agent && npm run build -w olow-chatbot",
-    "typecheck": "npm run typecheck -w @olow/types && npm run typecheck -w @olow/memory && npm run typecheck -w @olow/engine && npm run typecheck -w @olow/templates && npm run typecheck -w @olow/messengers && npm run typecheck -w @olow/react-agent && npm run typecheck -w olow-chatbot",
+    "build": "npm run build -w @olow/types && npm run build -w @olow/memory && npm run build -w @olow/engine && npm run build -w @olow/templates && npm run build -w @olow/messengers && npm run build -w @olow/agent-flows && npm run build -w olow-chatbot",
+    "typecheck": "npm run typecheck -w @olow/types && npm run typecheck -w @olow/memory && npm run typecheck -w @olow/engine && npm run typecheck -w @olow/templates && npm run typecheck -w @olow/messengers && npm run typecheck -w @olow/agent-flows && npm run typecheck -w olow-chatbot",
     "dev": "npm run dev --workspace=olow-chatbot",
     "test": "vitest run",
     "test:watch": "vitest",
