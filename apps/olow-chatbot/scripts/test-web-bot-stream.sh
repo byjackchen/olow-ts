@@ -3,14 +3,15 @@
 # Web Bot Streaming Test — matches oit-chatbot/scripts/bot_self_test/web_bot_stream.py
 #
 # Usage:
-#   ./scripts/test-web-bot-stream.sh
-#   ./scripts/test-web-bot-stream.sh "Palo Alto的guest wifi"
-#   ./scripts/test-web-bot-stream.sh "how to reset password" http://localhost:3001
-#   ./scripts/test-web-bot-stream.sh --raw "hello"
+#   ./scripts/test-web-bot-stream.sh                              # default query
+#   ./scripts/test-web-bot-stream.sh "Palo Alto的guest wifi"     # triggers ReAct + tools
+#   ./scripts/test-web-bot-stream.sh "查看我的硬件申请"             # triggers ReAct + Navigate
+#   ./scripts/test-web-bot-stream.sh --raw "hello"               # raw SSE output
+#   ./scripts/test-web-bot-stream.sh "hello" http://localhost:3070  # custom endpoint
 
 set -euo pipefail
 
-URL="${2:-http://localhost:3001}"
+URL="${2:-http://localhost:3070}"
 TOKEN="${TOKEN:-f0b03b9a126f7b45018521bbce6587e3}"
 SENDER="${SENDER:-testuser}"
 RAW=false
@@ -35,7 +36,7 @@ START_TIME=$(python3 -c "import time; print(time.time())")
 curl -s -N --max-time 120 \
   -H "Authorization: Bearer ${TOKEN}" \
   -H "Content-Type: application/json" \
-  -d "{\"UserId\":\"${SENDER}\",\"content\":\"${QUESTION}\",\"SessionId\":\"test-stream\"}" \
+  -d "{\"UserId\":\"${SENDER}\",\"content\":\"${QUESTION}\",\"SessionId\":\"test-stream\",\"Site\":\"${SITE:-OIT_Center}\"}" \
   "${URL}/web_bot?mode=stream" 2>&1 | python3 -c "
 import sys, json, time
 
@@ -120,6 +121,9 @@ for raw_line in sys.stdin:
             mname = msg.get('media_name', 'unknown')
             mdata = msg.get('media_base64', '')
             print(f'\n{color}{C_BOLD}[{label} message]{C_RS}{C_META} (format={fmt}) {mname} [{len(mdata)} bytes]{C_RS}')
+        elif fmt == 'json':
+            # Navigate response
+            print(f'\n{color}{C_BOLD}[{label} message]{C_RS}{C_META} (format={fmt}){C_RS}\n{color}{json.dumps(msg, indent=2)}{C_RS}', flush=True)
         elif mtype == 'answer':
             formatted = msg
             print(f'\n{color}{C_BOLD}[{label} message]{C_RS}{C_META} (format={fmt}){C_RS}\n{color}{formatted}{C_RS}', flush=True)

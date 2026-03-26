@@ -7,160 +7,178 @@ A production-ready, modular AI chatbot engine built with TypeScript. Designed as
 ### Layered Design
 
 ```
- ┌─────────────────────────────────────────────────────────────────┐
- │  app (olow-app)                          Concrete / App-specific │
- │                                                                  │
- │  ┌─────────┐  ┌──────────┐  ┌───────┐  ┌─────────────┐         │
- │  │ Broker  │  │ Providers│  │ Flows │  │ Messengers  │         │
- │  │ (IBroker│  │ LLM      │  │ Tools │  │ WeComMsg    │         │
- │  │  impl)  │  │ Messaging│  │ Chains│  │             │         │
- │  │         │  │ Context  │  │       │  │             │         │
- │  └────┬────┘  └────┬─────┘  └───┬───┘  └──────┬──────┘         │
- │       │            │            │              │                 │
- ├───────┼────────────┼────────────┼──────────────┼─────────────────┤
- │       ▼            ▼            ▼              ▼     Packages    │
- │                                                                  │
- │  @olow/engine          @olow/messengers    @olow/react-agent     │
- │  ┌──────────────┐      ┌──────────────┐    ┌──────────────┐     │
- │  │ IBroker      │      │ Messenger    │    │ 5-flow ReAct │     │
- │  │ ILlmProvider │      │ WebBotMsg    │    │ pipeline     │     │
- │  │ IMessaging.. │      │ StubMsg      │    │ Intent→Plan  │     │
- │  │ IUserContext │      │ Templates    │    │ →Act→Respond │     │
- │  │ IMessenger   │      │ I18n         │    │              │     │
- │  │ Dispatcher   │      │              │    │              │     │
- │  │ Registry     │      └──────────────┘    └──────────────┘     │
- │  │ BaseFlow     │                                                │
- │  │ BaseTool     │      @olow/memory                              │
- │  │ BaseAction.. │      ┌──────────────┐                         │
- │  └──────────────┘      │ ContextGraph │                         │
- │                        │ Settings     │      Abstract / Generic  │
- │                        │ ActionChain  │                         │
- │                        └──────────────┘                         │
- └─────────────────────────────────────────────────────────────────┘
+ ┌───────────────────────────────────────────────────────────────────────┐
+ │  app (olow-chatbot)                              Concrete / App-layer │
+ │                                                                       │
+ │  ┌──────────┐  ┌───────────┐  ┌────────┐  ┌───────────┐  ┌────────┐ │
+ │  │ Broker   │  │ Providers │  │ Flows  │  │Messengers │  │Templates│ │
+ │  │ (IBroker │  │ LLM       │  │ Tools  │  │ WeComMsg  │  │ AiAnswer│ │
+ │  │  impl)   │  │ Messaging │  │ Chains │  │           │  │ GuestWi │ │
+ │  │          │  │ Context   │  │ ASR    │  │           │  │         │ │
+ │  └────┬─────┘  └─────┬─────┘  └───┬────┘  └─────┬─────┘  └────┬───┘ │
+ │       │              │            │              │              │     │
+ ├───────┼──────────────┼────────────┼──────────────┼──────────────┼─────┤
+ │       ▼              ▼            ▼              ▼              ▼     │
+ │                                                           Packages   │
+ │  @olow/types    @olow/engine      @olow/messengers  @olow/templates  │
+ │  ┌──────────┐   ┌─────────────┐   ┌─────────────┐  ┌─────────────┐  │
+ │  │ Enums    │   │ Dispatcher  │   │ Messenger   │  │ TextTpl     │  │
+ │  │ Schemas  │   │ Registry ×5 │   │ WebBotMsg   │  │ AiIdleTpl   │  │
+ │  │ Zod      │   │ BaseFlow    │   │ StubMsg     │  │ I18n        │  │
+ │  │ ITemplate│   │ BaseTool    │   └─────────────┘  └─────────────┘  │
+ │  │ ToolTag  │   │ IBroker     │                                      │
+ │  └──────────┘   │ IMessenger  │   @olow/agent-flows                  │
+ │                 │ Archiver    │   ┌─────────────┐  @olow/memory      │
+ │                 │ MsgHandler  │   │ ReAct 5-flow│  ┌─────────────┐  │
+ │                 └─────────────┘   │ OCR flow    │  │ ContextGraph│  │
+ │                                   │ Navigate    │  │ Settings    │  │
+ │                                   └─────────────┘  │ ActionChain │  │
+ │                                                     └─────────────┘  │
+ │                                         Abstract / Generic           │
+ └───────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Package Dependency Graph
 
 ```
-@olow/memory                          (zero dependencies)
-     │
-     ▼
-@olow/engine                          (defines all interfaces & base classes)
-     │
-     ├──────────────┐
-     ▼              ▼
-@olow/messengers   @olow/react-agent  (implementations & agents)
-     │              │
+@olow/types    @olow/memory        (leaves — zero cross-deps)
+     ↓              ↓
      └──────┬───────┘
             ▼
-          app                         (composition root — wires everything)
+      @olow/engine                  (interfaces + runtime + registries)
+            ↓
+     ┌──────┼────────────┐
+     ▼      ▼            ▼
+templates  messengers   agent-flows (implementations + agents)
+     │      │            │
+     └──────┼────────────┘
+            ▼
+    apps/olow-chatbot               (composition root)
 ```
 
-Build order: `memory → engine → messengers → react-agent → app`
+Build order: `types → memory → engine → templates → messengers → agent-flows → app`
 
 ### Directory Structure
 
 ```
 olow-ts/
 ├── packages/
-│   ├── memory/           @olow/memory           Pure data structures (graph, settings, actionchain)
-│   ├── engine/           @olow/engine           Interfaces, dispatcher, registry, base classes
-│   ├── messengers/       @olow/messengers       Messenger impls + templates + i18n
-│   └── react-agent/      @olow/react-agent      ReAct reasoning agent (5-flow pipeline)
+│   ├── types/            @olow/types          Enums, schemas, shared interfaces (zero runtime deps)
+│   ├── memory/           @olow/memory         Per-user memory (graph, settings, actionchain)
+│   ├── engine/           @olow/engine         Dispatcher, registries, base classes, broker interfaces
+│   ├── templates/        @olow/templates      Default template impls + I18n + Templates factory
+│   ├── messengers/       @olow/messengers     Messenger impls + Messenger factory
+│   └── agent-flows/      @olow/agent-flows    ReAct pipeline, OCR flow, Navigate flow
 │
-├── apps/olow-chatbot/                  olow-app               Reference application
+├── apps/olow-chatbot/    olow-chatbot         Reference chatbot application
+│   ├── Dockerfile
+│   ├── docker-compose.yml
+│   ├── .env
 │   └── src/
-│       ├── index.ts                 Bootstrap & Fastify routes
-│       ├── config/                  YAML + .env config loading
-│       ├── engine/                  IBroker impl + providers
-│       │   ├── broker.ts            Composition root (singleton)
-│       │   ├── llm.provider.ts      ILlmProvider (OpenAI / Hyaide)
-│       │   ├── messaging.provider.ts IMessagingProvider (WeCom API)
-│       │   ├── user-context.provider.ts IUserContextRefresher (Workday + ITAware)
-│       │   └── token-cache.ts       3-tier cache (memory → DB → API)
-│       ├── messengers/              App-specific messenger implementations
-│       │   └── wecom.messenger.ts   WeComMessenger (parses + sends via WeCom API)
-│       ├── flows/                   Business logic (triage, greeting, click, etc.)
-│       ├── tools/                   Domain tools (FAQ, article, hardware-asset)
-│       ├── actionchains/            Multi-step workflows (guest-wifi)
-│       ├── services/                External API clients (wecom, openai, slack, etc.)
+│       ├── index.ts                 Bootstrap + Fastify routes
+│       ├── config/                  YAML + .env → Zod validation
+│       ├── engine/                  Broker + providers
+│       ├── messengers/              WeComMessenger (app-specific)
+│       ├── templates/               App-specific template overrides
+│       ├── flows/                   Business flows (triage, greeting, ASR, etc.)
+│       ├── tools/                   Domain tools (FAQ, article, etc.)
+│       ├── actionchains/            Multi-step workflows
+│       ├── services/                External API clients
 │       └── storage/                 MongoDB layer
-│
-└── [config files]        package.json, tsconfig, Dockerfile, vitest.config
 ```
 
-## Abstract → Concrete Mounting
+## Mounting Mechanisms
 
-The engine defines **interfaces**. The app provides **implementations**. They connect at bootstrap via the builder pattern and decorator-based registry.
+The engine defines **interfaces**. Apps provide **implementations**. Four mechanisms connect them:
 
-### Interfaces (engine defines)
+### 1. Builder — explicit wiring at bootstrap
 
-| Interface | Purpose | Mounted by |
-|-----------|---------|------------|
-| `IBroker` | Storage, cache, lifecycle, user ID resolution | `Broker` singleton in app |
-| `ILlmProvider` | LLM call + streaming | `LlmProvider` (OpenAI / Hyaide) |
-| `IMessagingProvider` | Out-of-band message sending (notifications, errors) | `MessagingProvider` (WeCom API) |
-| `IUserContextRefresher` | Fetch user context from external HR/profile systems | `UserContextProvider` (Workday + ITAware) |
-| `IMessenger` | Parse inbound messages + send replies per platform | `WeComMessenger`, `WebBotMessenger` |
-| `BaseFlow` | Handle a specific event type | App flows (triage, greeting, click...) |
-| `BaseTool` | Execute a tool action | App tools (FAQ, article, hardware-asset...) |
-| `BaseActionChain` | Multi-step interactive workflow | App chains (guest-wifi) |
-| `ITemplate` | Render message content for a messenger type | Templates in `@olow/messengers` |
+Used for: **core infrastructure** that must exist before any request.
 
-### Mounting Mechanisms
-
-**1. Builder pattern (explicit wiring)**
+| What | Method | Example |
+|------|--------|---------|
+| Broker | `.withBroker(broker)` | `IBroker` impl with Redis, MongoDB, token caches |
+| Messenger factory | `.withMessengerFactory(fn)` | `Messenger.create` (registry-backed) |
+| Engine config | `.withConfig(config)` | Zod-validated from YAML + .env |
+| Module dirs | `.addFlowDir()` / `.addToolDir()` / etc. | Auto-discover via directory scan |
 
 ```typescript
-const broker = Broker.getInstance();
-broker.setMessagingProvider(new MessagingProvider(broker.wecomBotTokenCache));
-
 const engine = await OlowEngine.create()
-  .withConfig(config.engine)           // engine config (Zod-validated)
-  .withBroker(broker)                  // IBroker implementation
-  .withMessengerFactory(Messenger.create) // MessengerFactory function
-  .addFlowDir('./flows')               // auto-discover flows
-  .addToolDir('./tools')               // auto-discover tools
-  .addActionChainDir('./actionchains') // auto-discover actionchains
-  .addMessengerDir('./messengers')     // auto-discover messengers
+  .withConfig(config.engine)
+  .withBroker(broker)
+  .withMessengerFactory(Messenger.create)
+  .addFlowDir(join(__dirname, 'flows'))
+  .addToolDir(join(__dirname, 'tools'))
+  .addActionChainDir(join(__dirname, 'actionchains'))
+  .addMessengerDir(join(__dirname, 'messengers'))
+  .addTemplateDir(join(__dirname, 'templates'))
   .initialize();
 ```
 
-**2. Decorator registry (auto-registration on import)**
+### 2. Setter — runtime injection of optional providers
+
+Used for: **pluggable providers** that may not exist in all deployments.
+
+| What | Setter | When absent |
+|------|--------|-------------|
+| Messaging | `broker.setMessagingProvider(p)` | Notifications silently skipped |
 
 ```typescript
-// Flows, tools, actionchains, messengers register via decorators:
-@flowRegistry.register()
-export class TriageFlow extends BaseFlow { ... }
-
-@toolRegistry.register({ name: 'faq_search' })
-export class FaqTool extends BaseTool { ... }
-
-@messengerRegistry.register({ name: 'WeCom_Bot' })
-export class WeComMessenger implements IMessenger { ... }
-
-// Engine discovers modules by scanning directories:
-// addFlowDir() → flowRegistry.discoverModules(dir)
-// addMessengerDir() → messengerRegistry.discoverModules(dir)
+const broker = Broker.getInstance();
+// Only wire if WeCom is configured
+broker.setMessagingProvider(new MessagingProvider(broker.wecomBotTokenCache));
 ```
 
-**3. Messenger factory (runtime lookup)**
+### 3. Provider — interface implementations injected into Broker
+
+Used for: **external service adapters** that vary per project.
+
+| Interface | Provider class | Swappable for |
+|-----------|---------------|---------------|
+| `ILlmProvider` | `LlmProvider` (OpenAI/Hyaide) | Azure, Anthropic, local LLM |
+| `IMessagingProvider` | `MessagingProvider` (WeCom) | Slack, Teams, none |
+| `IUserContextRefresher` | `UserContextProvider` (Workday+ITAware) | LDAP, custom HR |
 
 ```typescript
-// Messenger.create() queries messengerRegistry at runtime:
-class Messenger {
-  static create(type: MessengerType): IMessenger {
-    const Class = messengerRegistry.getRegistered().get(type);
-    if (Class) return new Class();
-    return new StubMessenger(type);  // fallback
-  }
+// Different project, different providers:
+class MyBroker implements IBroker {
+  get llm() { return new AzureOpenAIProvider(); }
+  refreshUserContext(id) { return ldapLookup(id); }
 }
 ```
 
-**4. Pluggable routing (side-effect registration)**
+### 4. Register — decorator-based auto-registration
+
+Used for: **flows, tools, messengers, templates, actionchains** — discovered at startup.
+
+All 5 registries share the same `ModuleRegistry` class. Later registration overrides earlier (app overrides package defaults).
+
+| Registry | Decorator | Discovery | Override example |
+|----------|-----------|-----------|-----------------|
+| `flowRegistry` | `@flowRegistry.register()` | `addFlowDir()` | App flow overrides package flow |
+| `toolRegistry` | `@toolRegistry.register({ name })` | `addToolDir()` | Custom tool replaces default |
+| `messengerRegistry` | `@messengerRegistry.register({ name })` | `addMessengerDir()` | WeComMessenger in app |
+| `templateRegistry` | `@templateRegistry.register({ name })` | `addTemplateDir()` | App richtext overrides plain text |
+| `actionchainRegistry` | `@actionchainRegistry.register()` | `addActionChainDir()` | App-specific workflows |
 
 ```typescript
-// apps/olow-chatbot/src/events.ts — registered on import
+// Package layer — default template:
+@templateRegistry.register({ name: 'AiReActAnswerTemplate' })
+export class AiReActAnswerTemplate implements ITemplate {
+  render() { return [MsgType.TEXT, plainText]; }  // plain text
+}
+
+// App layer — override with richtext:
+@templateRegistry.register({ name: 'AiReActAnswerTemplate' })
+export class AiReActAnswerTemplate implements ITemplate {
+  render() { return [MsgType.WECOM_RICHTEXT, richtextAtoms]; }  // richtext with buttons
+}
+// App registers AFTER package → overrides via Map.set()
+```
+
+**Pluggable event routing** (also register-based):
+```typescript
+// apps/olow-chatbot/src/events.ts — side-effect on import
 registerSystemActionParser((msg) => { ... });
 registerEventRouter((action, msg, channelType) => { ... });
 ```
@@ -322,10 +340,12 @@ class MyBroker implements IBroker {
 
 | Package | Deps | Description |
 |---------|------|-------------|
+| `@olow/types` | zod | Shared enums, Zod schemas, interfaces (zero runtime deps) |
 | `@olow/memory` | zod | Per-user memory: context graph, settings, actionchain |
-| `@olow/engine` | memory, pino, zod, mcp-sdk | Interfaces, dispatcher, registry, base classes, BM25 matcher, MCP proxy |
-| `@olow/messengers` | engine | Messenger factory, WebBot/Stub impls, templates, i18n |
-| `@olow/react-agent` | engine, messengers | ReAct flows (intent -> precall -> plan -> act -> response) |
+| `@olow/engine` | types, memory, pino, mcp-sdk | Dispatcher, 5 registries, base classes, broker interfaces |
+| `@olow/templates` | engine | Default template impls + Templates factory + I18n |
+| `@olow/messengers` | engine | Messenger factory + WebBot/Stub impls |
+| `@olow/agent-flows` | engine, templates | ReAct pipeline, OCR flow, Navigate flow |
 
 ## Quick Start
 

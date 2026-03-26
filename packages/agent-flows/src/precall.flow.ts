@@ -44,7 +44,14 @@ export class ReactPrecallFlow extends BaseFlow {
       this.dispatcher.states.react.user_persona = {};
     }
 
+    // Chain REACT_PLAN (always)
     this.dispatcher.eventchain.push(new Event(ReactEventType.REACT_PLAN));
+
+    // Chain REACT_NAVIGATE in parallel (for web portal sites)
+    if (this.request.site) {
+      this.dispatcher.eventchain.push(new Event(ReactEventType.REACT_NAVIGATE));
+    }
+
     return EventStatus.COMPLETE;
   }
 }
