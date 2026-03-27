@@ -33,7 +33,7 @@ export function ChatView({
   const isEmpty = messages.length === 0 && !isStreaming;
 
   return (
-    <div className="flex h-full flex-col bg-gray-850">
+    <div className="flex h-full flex-col bg-gray-900">
       {isEmpty ? (
         <EmptyState onSend={sendMessage} />
       ) : (

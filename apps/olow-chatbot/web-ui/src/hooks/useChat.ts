@@ -280,8 +280,17 @@ export function useChat(): UseChatReturn {
         });
       };
 
-      const onMessage = (_msg: DecodedMsg) => {
-        // Reserved for future use (e.g. rich messages, navigation triggers).
+      const onMessage = (msg: DecodedMsg) => {
+        // Handle complete messages (non-streaming responses).
+        if (msg.message_type === 'answer' && typeof msg.message === 'string') {
+          accAnswer = msg.message;
+          setStreamingContent({
+            answer: accAnswer,
+            l1: accL1,
+            l2: accL2,
+            l3: accL3,
+          });
+        }
       };
 
       const finalise = () => {
