@@ -1,7 +1,6 @@
 import {
   BaseFlow, Event, Request, flowRegistry, getLogger,
   CoreEventType, EventStatus, ActionType,
-  ensureSession, addContentNode,
 } from '@olow/engine';
 import type { MessengerType } from '@olow/engine';
 import { ReactEventType, TriageEventType } from './events.js';
@@ -82,16 +81,11 @@ export class TriageFlow extends BaseFlow {
       const detectedLang = Request.detectLanguage(this.request.content.mixedText);
       this.request.language = detectedLang;
 
-      // Update user settings memory with language
+      // Update user settings memory with language (persisted later by archiveCycle)
       if ('memory' in requester && requester.memory) {
         try {
           const memory = await requester.memory();
           memory.updateSettings({ info_maps: { ...memory.settings.info_maps, language: detectedLang } });
-          // Record user message in session graph
-          const sessionId = this.request.sessionId ?? 'default';
-          ensureSession(memory.graph, sessionId);
-          addContentNode(memory.graph, sessionId, this.request.content.mixedText);
-          await memory.save();
         } catch {
           // Non-fatal
         }

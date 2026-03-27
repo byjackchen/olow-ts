@@ -1,13 +1,10 @@
 import {
-  BaseFlow, Event, flowRegistry, getLogger,
+  BaseFlow, Event, flowRegistry,
   CoreEventType, EventStatus, FlowMsgType,
-  ensureSession, addContentNode,
 } from '@olow/engine';
 import type { MessengerType } from '@olow/engine';
 import { ReactEventType } from './events.js';
 import { getReactTemplateProvider } from './templates.js';
-
-const logger = getLogger();
 
 @flowRegistry.register()
 export class ReactResponseFlow extends BaseFlow {
@@ -23,19 +20,6 @@ export class ReactResponseFlow extends BaseFlow {
     const recommendations = this.extractRecommendations(processChain);
     const responseText = this.extractResponse(processChain)
       ?? tpl.i18n.NO_ANSWER(this.request.language ?? undefined);
-
-    try {
-      const { requester } = this.request;
-      if ('memory' in requester && requester.memory) {
-        const mem = await requester.memory();
-        const sessionId = this.request.sessionId ?? 'default';
-        ensureSession(mem.graph, sessionId);
-        addContentNode(mem.graph, sessionId, `Assistant: ${responseText}`);
-        await mem.save();
-      }
-    } catch (err) {
-      logger.error({ msg: 'Failed to record assistant response in session graph', err });
-    }
 
     if (recommendations.length > 0) {
       this.dispatcher.states.shown_faqs = recommendations
