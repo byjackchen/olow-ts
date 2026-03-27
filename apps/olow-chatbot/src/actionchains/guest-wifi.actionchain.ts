@@ -80,7 +80,7 @@ export class GuestWifiActionChain extends BaseActionChain {
     );
 
     // Generate and send QR code
-    const qrBase64 = generateWifiQrSvg(info.ssid, info.password, info.expired_date);
+    const qrBase64 = await generateWifiQrSvg(info.ssid, info.password);
     await this.event.propagateMsg(
       Templates.create('SingleMediaTemplate', {
         mediaType: MsgType.IMAGE,
@@ -100,22 +100,11 @@ export class GuestWifiActionChain extends BaseActionChain {
   }
 }
 
-// ─── QR Code Generator (SVG, zero dependencies) ───
+// ─── QR Code Generator ───
 
-function generateWifiQrSvg(ssid: string, password: string, expiredDate: string): string {
+async function generateWifiQrSvg(ssid: string, password: string): Promise<string> {
+  const QRCode = await import('qrcode');
   const payload = `WIFI:T:WPA;S:${ssid};P:${password};;`;
-  // Simple text-based SVG with WiFi info (no qrcode lib needed for MVP)
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="300" height="200" viewBox="0 0 300 200">
-    <rect width="300" height="200" fill="white" stroke="#ccc" stroke-width="1"/>
-    <text x="150" y="40" text-anchor="middle" font-family="monospace" font-size="16" font-weight="bold">Guest WiFi</text>
-    <text x="150" y="70" text-anchor="middle" font-family="monospace" font-size="14">SSID: ${escapeXml(ssid)}</text>
-    <text x="150" y="95" text-anchor="middle" font-family="monospace" font-size="14">Password: ${escapeXml(password)}</text>
-    <text x="150" y="120" text-anchor="middle" font-family="monospace" font-size="12" fill="#666">Expires: ${escapeXml(expiredDate)}</text>
-    <text x="150" y="160" text-anchor="middle" font-family="monospace" font-size="10" fill="#999">${escapeXml(payload)}</text>
-  </svg>`;
+  const svg = await QRCode.toString(payload, { type: 'svg', margin: 2, width: 256 });
   return Buffer.from(svg).toString('base64');
-}
-
-function escapeXml(s: string): string {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }

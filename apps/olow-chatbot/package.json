@@ -16,29 +16,31 @@
     "db:init": "tsx scripts/initialize-mongo.ts"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.3",
     "@olow/engine": "*",
     "@olow/flows": "*",
     "@olow/messengers": "*",
     "@olow/templates": "*",
+    "@slack/bolt": "^4.3.1",
+    "fast-xml-parser": "^5.2.3",
     "fastify": "^5.3.3",
-    "zod": "^3.25.67",
-    "mongodb": "^6.16.0",
     "ioredis": "^5.6.1",
+    "mongodb": "^6.16.0",
+    "openai": "^5.8.2",
     "pino": "^9.7.0",
     "pino-pretty": "^13.0.0",
+    "qrcode": "^1.5.4",
     "yaml": "^2.8.0",
-    "openai": "^5.8.2",
-    "@slack/bolt": "^4.3.1",
-    "@modelcontextprotocol/sdk": "^1.12.3",
-    "fast-xml-parser": "^5.2.3"
+    "zod": "^3.25.67"
   },
   "devDependencies": {
-    "typescript": "^5.8.3",
-    "tsx": "^4.19.4",
     "@types/node": "^22.15.29",
-    "vitest": "^3.2.3",
+    "@types/qrcode": "^1.5.6",
     "@typescript-eslint/eslint-plugin": "^8.34.1",
     "@typescript-eslint/parser": "^8.34.1",
-    "eslint": "^9.28.0"
+    "eslint": "^9.28.0",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.3"
   }
 }
