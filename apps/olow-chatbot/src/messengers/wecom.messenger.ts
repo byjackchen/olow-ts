@@ -9,10 +9,7 @@ import type {
 import * as wecomApi from '../services/wecom.api.js';
 import type { Broker } from '../engine/broker.js';
 
-function resolveSessionId(msg: Record<string, unknown>, channelType: ChannelType | null): string {
-  if (channelType === 'group') return 'default';
-  const sid = msg['SessionId'];
-  if (typeof sid === 'string' && sid.trim()) return sid.trim();
+function resolveSessionId(_msg: Record<string, unknown>, _channelType: ChannelType | null): string {
   return 'default';
 }
 
