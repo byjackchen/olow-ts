@@ -1,13 +1,14 @@
-// ═══════════════════ @olow/agent-flows — Public API ═══════════════════
+// ═══════════════════ @olow/core-flows — Public API ═══════════════════
 
 // Config
 export { setReactAgentConfig, getReactAgentConfig, type ReactAgentConfig } from './config.js';
+export { setTriageConfig, getTriageConfig, type TriageConfig } from './triage-config.js';
 
 // Templates
 export { setReactTemplateProvider, getReactTemplateProvider, type IReactTemplateProvider } from './templates.js';
 
 // Events
-export { ReactEventType, AgentEventType } from './events.js';
+export { ReactEventType, AgentEventType, TriageEventType } from './events.js';
 
 // Prompts
 export { reactIntentPrompt, reactPlanPrompt, reactResponsePrompt, navigatePrompt } from './prompts.js';
@@ -22,3 +23,6 @@ export { ReactResponseFlow } from './response.flow.js';
 // Agent Flows
 export { OcrFlow } from './ocr.flow.js';
 export { ReactNavigateFlow, AiNavigateTemplate, setNavItems, getNavItems, type NavItem } from './navigate.flow.js';
+
+// Triage Flow
+export { TriageFlow } from './triage.flow.js';

@@ -1,6 +1,6 @@
 import {
   BaseTool, toolRegistry, getLogger,
-  ToolArgumentType,
+  ToolArgumentType, getContext,
 } from '@olow/engine';
 import type { ToolTag, ToolResult } from '@olow/engine';
 const logger = getLogger();
@@ -28,7 +28,8 @@ export class ChatHistoryTool extends BaseTool {
     if (!user_id) return { success: false, error: 'user_id is required' };
 
     try {
-      const cycles = await mongo.cyclesGetUserRecentCycles(user_id);
+      const sessionId = getContext()?.sessionId;
+      const cycles = await mongo.cyclesGetUserRecentCycles(user_id, sessionId);
       const history = cycles.map((c) => ({
         action: c['request_action'],
         content: c['request_content'],

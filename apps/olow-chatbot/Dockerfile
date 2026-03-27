@@ -6,13 +6,13 @@ COPY packages/types/package.json ./packages/types/
 COPY packages/memory/package.json ./packages/memory/
 COPY packages/engine/package.json ./packages/engine/
 COPY packages/templates/package.json ./packages/templates/
-COPY packages/agent-flows/package.json ./packages/agent-flows/
+COPY packages/core-flows/package.json ./packages/core-flows/
 COPY packages/messengers/package.json ./packages/messengers/
 COPY apps/olow-chatbot/package.json ./apps/olow-chatbot/
 RUN npm ci
 COPY packages/ ./packages/
 COPY apps/olow-chatbot/ ./apps/olow-chatbot/
-RUN npm run build -w @olow/types && npm run build -w @olow/memory && npm run build -w @olow/engine && npm run build -w @olow/templates && npm run build -w @olow/messengers && npm run build -w @olow/agent-flows && npm run build -w olow-chatbot
+RUN npm run build -w @olow/types && npm run build -w @olow/memory && npm run build -w @olow/engine && npm run build -w @olow/templates && npm run build -w @olow/messengers && npm run build -w @olow/core-flows && npm run build -w olow-chatbot
 
 # Runtime stage
 FROM node:22-alpine

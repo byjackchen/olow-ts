@@ -1,7 +1,7 @@
 {
-  "name": "@olow/agent-flows",
+  "name": "@olow/core-flows",
   "version": "1.0.0",
-  "description": "Olow agent flows — ReAct pipeline, OCR, navigation",
+  "description": "Olow core flows — triage, ReAct pipeline, OCR, navigation",
   "type": "module",
   "engines": { "node": ">=22.0.0" },
   "main": "dist/index.js",

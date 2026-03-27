@@ -15,7 +15,7 @@ export {
   createDefaultSettings,
   MemoryActionChainSchema,
   MemorySettingsSchema,
-  addSession,
+  ensureSession,
   addContentNode,
   getSessionContent,
   serializeGraph,

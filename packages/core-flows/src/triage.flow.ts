@@ -1,13 +1,14 @@
 import {
   BaseFlow, Event, Request, flowRegistry, getLogger,
-  CoreEventType, EventStatus, ActionType, FlowMsgType,
+  CoreEventType, EventStatus, ActionType,
+  ensureSession, addContentNode,
 } from '@olow/engine';
 import type { MessengerType } from '@olow/engine';
-import { AppEventType } from '../events.js';
-import { ReactEventType } from '@olow/agent-flows';
+import { ReactEventType, TriageEventType } from './events.js';
+import { getTriageConfig } from './triage-config.js';
+
 const logger = getLogger();
 import { TextTemplate, AgentSupportConfirmTemplate, I18n } from '@olow/templates';
-import { config } from '../config/index.js';
 
 // ─── Similarity Words ───
 
@@ -86,6 +87,11 @@ export class TriageFlow extends BaseFlow {
         try {
           const memory = await requester.memory();
           memory.updateSettings({ info_maps: { ...memory.settings.info_maps, language: detectedLang } });
+          // Record user message in session graph
+          const sessionId = this.request.sessionId ?? 'default';
+          ensureSession(memory.graph, sessionId);
+          addContentNode(memory.graph, sessionId, this.request.content.mixedText);
+          await memory.save();
         } catch {
           // Non-fatal
         }
@@ -113,7 +119,7 @@ export class TriageFlow extends BaseFlow {
 
     // 4. Handle click actions
     if (this.request.action === ActionType.CLICK) {
-      this.dispatcher.eventchain.push(new Event(AppEventType.CLICK));
+      this.dispatcher.eventchain.push(new Event(TriageEventType.CLICK));
       return EventStatus.COMPLETE;
     }
 
@@ -129,7 +135,7 @@ export class TriageFlow extends BaseFlow {
       }
 
       if (similarity === 'greeting') {
-        this.dispatcher.eventchain.push(new Event(AppEventType.GREETING));
+        this.dispatcher.eventchain.push(new Event(TriageEventType.GREETING));
         return EventStatus.COMPLETE;
       }
     }
@@ -143,8 +149,8 @@ export class TriageFlow extends BaseFlow {
 
   private async peakShaving(): Promise<boolean> {
     try {
-      const threshold = config.engine.rolling_requests_threshold;
-      const count = await this.broker.incrementPeakShaving(60);  // direct IBroker method
+      const threshold = getTriageConfig().rolling_requests_threshold;
+      const count = await this.broker.incrementPeakShaving(60);
       if (count >= threshold) {
         logger.warn(`Peak shaving triggered: ${count} >= ${threshold}`);
         return true;

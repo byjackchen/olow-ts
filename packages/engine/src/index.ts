@@ -51,6 +51,7 @@ export { ContentBlocks, determineActionType } from './content-blocks.js';
 export {
   Memory, setMemoryConfig, setMemoryStorage,
   writeProfile, recallProfile, syncProfile,
+  ensureSession, addContentNode, getSessionContent,
   type MemoryConfig, type IMemoryStorage,
   type MemoryContextGraph, type MemoryActionChain, type MemorySettings,
   type UserPersona,

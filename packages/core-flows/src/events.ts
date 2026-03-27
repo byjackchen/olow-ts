@@ -10,3 +10,8 @@ export const ReactEventType = {
 export const AgentEventType = {
   OCR: 'ocr',
 } as const;
+
+export const TriageEventType = {
+  GREETING: 'greeting',
+  CLICK: 'click',
+} as const;

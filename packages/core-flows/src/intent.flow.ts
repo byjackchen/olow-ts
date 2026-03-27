@@ -1,6 +1,7 @@
 import {
   BaseFlow, Event, flowRegistry, getLogger,
   CoreEventType, EventStatus, FlowMsgType, matchTools,
+  getSessionContent,
 } from '@olow/engine';
 import type { MessengerType, ToolTag } from '@olow/engine';
 import { ReactEventType } from './events.js';
@@ -49,10 +50,8 @@ export class ReactIntentFlow extends BaseFlow {
 
     try {
       const mem = await requester.memory();
-      return mem.graph.nodes
-        .filter((n: { type: string; text: string }) => n.type === 'content' || n.type === 'rewrite')
-        .map((n: { text: string }) => n.text)
-        .join('\n');
+      const sessionId = this.request.sessionId ?? 'default';
+      return getSessionContent(mem.graph, sessionId).join('\n');
     } catch {
       return '';
     }

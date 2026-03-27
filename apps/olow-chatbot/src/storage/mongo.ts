@@ -192,19 +192,17 @@ export async function cyclesGetRecentQueries(user: string): Promise<Array<{ requ
     .reverse();
 }
 
-export async function cyclesGetUserRecentCycles(user: string): Promise<Document[]> {
+export async function cyclesGetUserRecentCycles(user: string, sessionId?: string): Promise<Document[]> {
   const cutoff = new Date(Date.now() - config.engine.recent_queries_cutoff_seconds * 1000);
-  return cycles
-    .find({
-      requester_type: 'User',
-      $or: [{ request_groupchat_id: null }, { request_groupchat_id: { $exists: false } }],
-      requester_id: user,
-      request_action: 'query',
-      request_time: { $gte: cutoff },
-    })
-    .sort({ request_time: -1 })
-    .limit(3)
-    .toArray();
+  const query: Record<string, unknown> = {
+    requester_type: 'User',
+    $or: [{ request_groupchat_id: null }, { request_groupchat_id: { $exists: false } }],
+    requester_id: user,
+    request_action: 'query',
+    request_time: { $gte: cutoff },
+  };
+  if (sessionId) query['request_session_id'] = sessionId;
+  return cycles.find(query).sort({ request_time: -1 }).limit(3).toArray();
 }
 
 export async function cyclesGetUserSingleChats(params: {

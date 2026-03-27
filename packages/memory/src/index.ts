@@ -138,7 +138,7 @@ export class Memory {
 }
 
 // Re-exports
-export { type MemoryContextGraph, createDefaultContextGraph, addSession, addContentNode, getSessionContent, serialize as serializeGraph, deserialize as deserializeGraph, pruneOldSessions, writeProfile, recallProfile, syncProfile } from './context-graph.js';
+export { type MemoryContextGraph, createDefaultContextGraph, ensureSession, addContentNode, getSessionContent, serialize as serializeGraph, deserialize as deserializeGraph, pruneOldSessions, writeProfile, recallProfile, syncProfile } from './context-graph.js';
 export type { ContextNode, ContextEdge, UserPersona } from './context-graph.js';
 export { type MemoryActionChain, createDefaultActionChain, MemoryActionChainSchema, ActionChainStepStatusSchema, ActionChainStepSchema, ActionChainEpisodeSchema } from './action-chain.js';
 export type { ActionChainStep, ActionChainStepStatus, ActionChainEpisode } from './action-chain.js';

@@ -9,7 +9,7 @@ import {
 } from '@olow/engine';
 import { Broker } from './engine/broker.js';
 import { MessagingProvider } from './engine/messaging.provider.js';
-import { setReactAgentConfig } from '@olow/agent-flows';
+import { setReactAgentConfig, setTriageConfig } from '@olow/core-flows';
 import '@olow/messengers'; // registers WebBotMessenger + StubMessenger
 import './events.js'; // registers system action parsers and event routers
 
@@ -21,6 +21,10 @@ setReactAgentConfig({
   intent_mode: config.engine.react_agent.intent_mode,
   max_rounds: config.engine.react_agent.max_rounds,
   specialized_score_threshold: config.engine.react_agent.retrieval_threshold,
+});
+
+setTriageConfig({
+  rolling_requests_threshold: config.engine.rolling_requests_threshold,
 });
 
 // ─── Bootstrap ───

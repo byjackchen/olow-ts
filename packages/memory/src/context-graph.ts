@@ -30,7 +30,7 @@ export function createDefaultContextGraph(): MemoryContextGraph {
   return { nodes: [], edges: [] };
 }
 
-export function addSession(graph: MemoryContextGraph, sessionId: string): void {
+export function ensureSession(graph: MemoryContextGraph, sessionId: string): void {
   if (graph.nodes.some((n) => n.id === sessionId)) return;
   graph.nodes.push({ id: sessionId, type: 'session', text: '', timestamp: new Date() });
 }
