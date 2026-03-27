@@ -11,6 +11,7 @@ import { nanoid } from 'nanoid';
 import type {
   DecodedMsg,
   FlowStates,
+  ImageContent,
   Message,
   Session,
   StreamDeltaMsg,
@@ -36,6 +37,7 @@ export interface StreamingContent {
   l1: string;
   l2: string;
   l3: string;
+  images: ImageContent[];
 }
 
 export interface UseChatReturn {
@@ -78,6 +80,7 @@ export function useChat(): UseChatReturn {
     l1: '',
     l2: '',
     l3: '',
+    images: [],
   });
 
   // AbortController for the in-flight request.
@@ -132,7 +135,7 @@ export function useChat(): UseChatReturn {
       if (id === activeIdRef.current) {
         abortRef.current?.abort();
         setIsStreaming(false);
-        setStreamingContent({ answer: '', l1: '', l2: '', l3: '' });
+        setStreamingContent({ answer: '', l1: '', l2: '', l3: '', images: [] });
       }
 
       removeStoredSession(id);
@@ -178,13 +181,14 @@ export function useChat(): UseChatReturn {
             ...last,
             content: sc.answer || last.content,
             thinking: Object.keys(thinking).length > 0 ? thinking : last.thinking,
+            images: sc.images.length > 0 ? sc.images : last.images,
             isStreaming: false,
           };
           return [...prev.slice(0, -1), finalised];
         }
         return prev;
       });
-      return { answer: '', l1: '', l2: '', l3: '' };
+      return { answer: '', l1: '', l2: '', l3: '', images: [] };
     });
   }, []);
 
@@ -246,13 +250,14 @@ export function useChat(): UseChatReturn {
       const controller = new AbortController();
       abortRef.current = controller;
       setIsStreaming(true);
-      setStreamingContent({ answer: '', l1: '', l2: '', l3: '' });
+      setStreamingContent({ answer: '', l1: '', l2: '', l3: '', images: [] });
 
       // Accumulators — mutated inside callbacks for performance.
       let accAnswer = '';
       let accL1 = '';
       let accL2 = '';
       let accL3 = '';
+      let accImages: ImageContent[] = [];
 
       const onDelta = (msg: StreamDeltaMsg) => {
         switch (msg.message_type) {
@@ -277,11 +282,30 @@ export function useChat(): UseChatReturn {
           l1: accL1,
           l2: accL2,
           l3: accL3,
+          images: accImages,
         });
       };
 
       const onMessage = (msg: DecodedMsg) => {
-        // Handle complete messages (non-streaming responses).
+        // Handle image messages.
+        if (msg.format_type === 'image' && msg.message && typeof msg.message === 'object' && !Array.isArray(msg.message)) {
+          const { media_name, media_base64 } = msg.message as Record<string, string>;
+          if (media_base64) {
+            const ext = (media_name ?? '').split('.').pop()?.toLowerCase() ?? 'png';
+            const mime = ext === 'svg' ? 'image/svg+xml' : `image/${ext}`;
+            accImages = [...accImages, { name: media_name ?? 'image', dataUri: `data:${mime};base64,${media_base64}` }];
+            setStreamingContent({
+              answer: accAnswer,
+              l1: accL1,
+              l2: accL2,
+              l3: accL3,
+              images: accImages,
+            });
+          }
+          return;
+        }
+
+        // Handle complete text messages (non-streaming responses).
         if (msg.message_type === 'answer' && typeof msg.message === 'string') {
           accAnswer = msg.message;
           setStreamingContent({
@@ -289,6 +313,7 @@ export function useChat(): UseChatReturn {
             l1: accL1,
             l2: accL2,
             l3: accL3,
+            images: accImages,
           });
         }
       };
@@ -306,6 +331,7 @@ export function useChat(): UseChatReturn {
               ...last,
               content: accAnswer,
               thinking: hasTh ? thinking : undefined,
+              images: accImages.length > 0 ? accImages : undefined,
               isStreaming: false,
             };
             return [...prev.slice(0, -1), finalised];
@@ -313,7 +339,7 @@ export function useChat(): UseChatReturn {
           return prev;
         });
         setIsStreaming(false);
-        setStreamingContent({ answer: '', l1: '', l2: '', l3: '' });
+        setStreamingContent({ answer: '', l1: '', l2: '', l3: '', images: [] });
 
         // Update session timestamp.
         setSessions((prev) =>
@@ -363,7 +389,7 @@ export function useChat(): UseChatReturn {
             return prev;
           });
           setIsStreaming(false);
-          setStreamingContent({ answer: '', l1: '', l2: '', l3: '' });
+          setStreamingContent({ answer: '', l1: '', l2: '', l3: '', images: [] });
         });
     },
     [createSession],

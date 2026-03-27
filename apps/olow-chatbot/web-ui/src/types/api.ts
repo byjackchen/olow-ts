@@ -41,11 +41,17 @@ export interface ThinkingContent {
   l3?: string;
 }
 
+export interface ImageContent {
+  name: string;
+  dataUri: string;
+}
+
 export interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
   thinking?: ThinkingContent;
+  images?: ImageContent[];
   timestamp: number;
   isStreaming?: boolean;
 }

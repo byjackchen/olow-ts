@@ -1,15 +1,9 @@
 import { Bot, User } from 'lucide-react';
 import type { Message } from '../../types/api';
+import type { StreamingContent } from '../../hooks/useChat';
 import { MarkdownRenderer } from './MarkdownRenderer';
 import { StreamingCursor } from './StreamingCursor';
 import { ThinkingIndicator } from './ThinkingIndicator';
-
-interface StreamingContent {
-  answer: string;
-  l1: string;
-  l2: string;
-  l3: string;
-}
 
 interface MessageBubbleProps {
   message: Message;
@@ -37,6 +31,11 @@ export function MessageBubble({
   const displayContent = isStreaming && streamingContent
     ? streamingContent.answer
     : message.content;
+
+  // Collect images from streaming or finalised message
+  const displayImages = isStreaming && streamingContent
+    ? streamingContent.images
+    : message.images ?? [];
 
   if (isUser) {
     return (
@@ -80,6 +79,20 @@ export function MessageBubble({
             <StreamingCursor />
           </div>
         ) : null}
+
+        {/* Images */}
+        {displayImages.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-2">
+            {displayImages.map((img, i) => (
+              <img
+                key={i}
+                src={img.dataUri}
+                alt={img.name}
+                className="max-w-full rounded-md border border-gray-700/50 bg-white"
+              />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

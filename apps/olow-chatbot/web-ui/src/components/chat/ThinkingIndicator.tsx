@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Loader2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Loader2, ChevronDown, ChevronUp, BrainCircuit } from 'lucide-react';
 import type { ThinkingContent } from '../../types/api';
 
 interface ThinkingIndicatorProps {
@@ -17,10 +17,9 @@ export function ThinkingIndicator({
   streamingL2,
   streamingL3,
 }: ThinkingIndicatorProps) {
-  // Auto-expand during streaming, auto-collapse when done
   const [expanded, setExpanded] = useState(false);
 
-  // When streaming ends, collapse the thinking section
+  // Auto-collapse when streaming ends
   useEffect(() => {
     if (!isStreaming) {
       setExpanded(false);
@@ -31,43 +30,45 @@ export function ThinkingIndicator({
   const l2 = streamingL2 || thinking.l2 || '';
   const l3 = streamingL3 || thinking.l3 || '';
 
-  const hasDetail = l2 || l3;
+  if (!l1 && !l2 && !l3) return null;
 
   return (
-    <div className="mb-2">
-      {/* Status line: animated spinner + l1 text during streaming */}
-      {isStreaming && l1 && (
-        <div className="flex items-center gap-2 text-sm text-gray-400">
-          <Loader2 size={14} className="animate-spin" />
+    <div className="mb-3 rounded-md border border-gray-700/40 bg-gray-800/30 px-3 py-2">
+      {/* L1 — primary title / status */}
+      {l1 && (
+        <div className="flex items-center gap-2 text-sm font-medium text-gray-300">
+          {isStreaming ? (
+            <Loader2 size={14} className="shrink-0 animate-spin text-indigo-400" />
+          ) : (
+            <BrainCircuit size={14} className="shrink-0 text-indigo-400" />
+          )}
           <span>{l1}</span>
         </div>
       )}
 
-      {/* Collapsible detail section */}
-      {hasDetail && (
-        <div className="mt-1">
+      {/* L2 — secondary title / subtitle */}
+      {l2 && (
+        <p className="mt-1 pl-[22px] text-xs leading-relaxed text-gray-400">
+          {l2}
+        </p>
+      )}
+
+      {/* L3 — collapsible details */}
+      {l3 && (
+        <div className="mt-1.5 pl-[22px]">
           <button
             type="button"
             onClick={() => setExpanded((prev) => !prev)}
             className="flex items-center gap-1 text-xs text-gray-500 transition-colors duration-150 hover:text-gray-300"
           >
-            {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-            <span>{expanded ? 'Hide thinking' : 'Show thinking'}</span>
+            {expanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+            <span>{expanded ? 'Hide details' : 'Show details'}</span>
           </button>
 
           {expanded && (
-            <div className="mt-2 rounded-md border border-gray-700/50 bg-gray-800/50 p-3">
-              {l2 && (
-                <pre className="whitespace-pre-wrap font-mono text-xs leading-relaxed text-gray-500">
-                  {l2}
-                </pre>
-              )}
-              {l3 && (
-                <pre className="mt-2 whitespace-pre-wrap border-t border-gray-700/30 pt-2 font-mono text-xs leading-relaxed text-gray-500">
-                  {l3}
-                </pre>
-              )}
-            </div>
+            <pre className="mt-1.5 max-h-64 overflow-y-auto whitespace-pre-wrap rounded border border-gray-700/30 bg-gray-900/40 p-2 font-mono text-xs leading-relaxed text-gray-500">
+              {l3}
+            </pre>
           )}
         </div>
       )}

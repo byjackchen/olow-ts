@@ -1,13 +1,7 @@
 import { useEffect, useRef } from 'react';
 import type { Message } from '../../types/api';
+import type { StreamingContent } from '../../hooks/useChat';
 import { MessageBubble } from './MessageBubble';
-
-interface StreamingContent {
-  answer: string;
-  l1: string;
-  l2: string;
-  l3: string;
-}
 
 interface MessageListProps {
   messages: Message[];

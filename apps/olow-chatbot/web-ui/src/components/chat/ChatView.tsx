@@ -1,14 +1,8 @@
 import type { Message, Session } from '../../types/api';
+import type { StreamingContent } from '../../hooks/useChat';
 import { ChatInput } from './ChatInput';
 import { EmptyState } from './EmptyState';
 import { MessageList } from './MessageList';
-
-interface StreamingContent {
-  answer: string;
-  l1: string;
-  l2: string;
-  l3: string;
-}
 
 interface ChatViewProps {
   sessions: Session[];
