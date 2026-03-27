@@ -1,4 +1,4 @@
-// ═══════════════════ @olow/core-flows — Public API ═══════════════════
+// ═══════════════════ @olow/flows — Public API ═══════════════════
 
 // Config
 export { setReactAgentConfig, getReactAgentConfig, type ReactAgentConfig } from './config.js';

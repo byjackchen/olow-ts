@@ -2,7 +2,7 @@ import {
   CoreEventType, CoreActionType,
   registerSystemActionParser, registerEventRouter,
 } from '@olow/engine';
-import { ReactEventType, AgentEventType } from '@olow/core-flows';
+import { ReactEventType, AgentEventType } from '@olow/flows';
 
 // ─── App Event Types ───
 

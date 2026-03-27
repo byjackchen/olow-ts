@@ -27,7 +27,7 @@ A production-ready, modular AI chatbot engine built with TypeScript. Designed as
  │  │ Zod      │   │ BaseFlow    │   │ StubMsg     │  │ I18n        │  │
  │  │ ITemplate│   │ BaseTool    │   └─────────────┘  └─────────────┘  │
  │  │ ToolTag  │   │ IBroker     │                                      │
- │  └──────────┘   │ IMessenger  │   @olow/core-flows                  │
+ │  └──────────┘   │ IMessenger  │   @olow/flows                  │
  │                 │ Archiver    │   ┌─────────────┐  @olow/memory      │
  │                 │ MsgHandler  │   │ ReAct 5-flow│  ┌─────────────┐  │
  │                 └─────────────┘   │ OCR flow    │  │ ContextGraph│  │
@@ -49,14 +49,14 @@ A production-ready, modular AI chatbot engine built with TypeScript. Designed as
             ↓
      ┌──────┼────────────┐
      ▼      ▼            ▼
-templates  messengers   core-flows (implementations + agents)
+templates  messengers   flows (implementations + agents)
      │      │            │
      └──────┼────────────┘
             ▼
     apps/olow-chatbot               (composition root)
 ```
 
-Build order: `types → memory → engine → templates → messengers → core-flows → app`
+Build order: `types → memory → engine → templates → messengers → flows → app`
 
 ### Directory Structure
 
@@ -68,7 +68,7 @@ olow-ts/
 │   ├── engine/           @olow/engine         Dispatcher, registries, base classes, broker interfaces
 │   ├── templates/        @olow/templates      Default template impls + I18n + Templates factory
 │   ├── messengers/       @olow/messengers     Messenger impls + Messenger factory
-│   └── core-flows/       @olow/core-flows    ReAct pipeline, OCR flow, Navigate flow
+│   └── flows/       @olow/flows    ReAct pipeline, OCR flow, Navigate flow
 │
 ├── apps/olow-chatbot/    olow-chatbot         Reference chatbot application
 │   ├── Dockerfile
@@ -345,7 +345,7 @@ class MyBroker implements IBroker {
 | `@olow/engine` | types, memory, pino, mcp-sdk | Dispatcher, 5 registries, base classes, broker interfaces |
 | `@olow/templates` | engine | Default template impls + Templates factory + I18n |
 | `@olow/messengers` | engine | Messenger factory + WebBot/Stub impls |
-| `@olow/core-flows` | engine, templates | ReAct pipeline, OCR flow, Navigate flow |
+| `@olow/flows` | engine, templates | ReAct pipeline, OCR flow, Navigate flow |
 
 ## Quick Start
 

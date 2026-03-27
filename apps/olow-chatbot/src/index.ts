@@ -9,7 +9,7 @@ import {
 } from '@olow/engine';
 import { Broker } from './engine/broker.js';
 import { MessagingProvider } from './engine/messaging.provider.js';
-import { setReactAgentConfig, setTriageConfig } from '@olow/core-flows';
+import { setReactAgentConfig, setTriageConfig } from '@olow/flows';
 import '@olow/messengers'; // registers WebBotMessenger + StubMessenger
 import './events.js'; // registers system action parsers and event routers
 
