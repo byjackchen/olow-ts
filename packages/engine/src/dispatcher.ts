@@ -250,6 +250,8 @@ export class Dispatcher implements IDispatcher {
       opts.messengerType, opts.requesterType, opts.inMsg, opts.systemName,
     );
 
+    // enterWith() instead of run() because this is an async generator —
+    // yield cannot cross a run() callback boundary.
     requestContext.enterWith({
       cycleId: dispatcher.cycleId ?? '',
       requesterType: dispatcher.request?.requester?.type ?? '',

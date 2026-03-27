@@ -12,7 +12,3 @@ export const requestContext = new AsyncLocalStorage<RequestContext>();
 export function getContext(): RequestContext | undefined {
   return requestContext.getStore();
 }
-
-export function runWithContext<T>(ctx: RequestContext, fn: () => T): T {
-  return requestContext.run(ctx, fn);
-}

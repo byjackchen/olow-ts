@@ -12,7 +12,7 @@ engine:
   admin_chatgroup_id: ""
   post_msg_verbose: ${POST_MSG_VERBOSE:-false}
   base_llm_provider: ${BASE_LLM_PROVIDER:-openai}
-  base_llm_model: ${BASE_LLM_MODEL:-llm_gpt5_nano}
+  base_llm_model: ${BASE_LLM_MODEL:-llm_gpt5_2}
   react_agent:
     intent_mode: "multi-turns"
     max_rounds: 5

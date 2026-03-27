@@ -58,7 +58,7 @@ export {
 } from './memory/index.js';
 
 // Context
-export { requestContext, getContext, runWithContext, type RequestContext } from './context.js';
+export { requestContext, getContext, type RequestContext } from './context.js';
 
 // Config
 export { engineConfigSchema, type EngineConfig, mcpServerConfigSchema, type McpServerConfig } from './config.js';
