@@ -21,6 +21,16 @@ services:
         condition: service_started
     restart: unless-stopped
 
+  web-ui:
+    build:
+      context: web-ui
+      dockerfile: Dockerfile
+    ports:
+      - "8080:80"
+    depends_on:
+      - chatbot
+    restart: unless-stopped
+
   mongo:
     image: mongo:7
     ports:
